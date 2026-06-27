@@ -59,6 +59,44 @@ TransactionType Transaction::typeFromString(const QString &type,
     return defaultValue;
 }
 
+bool Transaction::validate(QString *errorMessage) const
+{
+    auto setError = [errorMessage](const QString &message) {
+        if (errorMessage) {
+            *errorMessage = message;
+        }
+    };
+
+    if (m_amount <= 0.0) {
+        setError(QStringLiteral("金额必须大于 0"));
+        return false;
+    }
+
+    switch (m_type) {
+    case TransactionType::Income:
+    case TransactionType::Expense:
+        break;
+    default:
+        setError(QStringLiteral("类型必须是 income 或 expense"));
+        return false;
+    }
+
+    if (m_category.trimmed().isEmpty()) {
+        setError(QStringLiteral("分类不能为空"));
+        return false;
+    }
+
+    if (m_date.trimmed().isEmpty()) {
+        setError(QStringLiteral("日期不能为空"));
+        return false;
+    }
+
+    if (errorMessage) {
+        errorMessage->clear();
+    }
+    return true;
+}
+
 int Transaction::id() const
 {
     return m_id;

@@ -25,6 +25,8 @@ public:
                                           bool *ok = nullptr,
                                           TransactionType defaultValue = TransactionType::Expense);
 
+    bool validate(QString *errorMessage = nullptr) const;
+
     int id() const;
     void setId(int id);
 
