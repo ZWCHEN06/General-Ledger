@@ -11,6 +11,7 @@ public:
     bool openDatabase();
     void closeDatabase();
     bool isOpen() const;
+    bool initializeTables();
 
 private:
     static constexpr const char *ConnectionName = "expense_tracker_connection";
@@ -18,4 +19,3 @@ private:
 
     QSqlDatabase m_database;
 };
-
