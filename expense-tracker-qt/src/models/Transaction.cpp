@@ -3,7 +3,7 @@
 Transaction::Transaction() = default;
 
 Transaction::Transaction(int id,
-                         Type type,
+                         TransactionType type,
                          double amount,
                          const QString &category,
                          const QString &date,
@@ -21,6 +21,44 @@ Transaction::Transaction(int id,
 {
 }
 
+QString Transaction::typeToString(TransactionType type)
+{
+    switch (type) {
+    case TransactionType::Income:
+        return QStringLiteral("income");
+    case TransactionType::Expense:
+        return QStringLiteral("expense");
+    }
+
+    return QStringLiteral("expense");
+}
+
+TransactionType Transaction::typeFromString(const QString &type,
+                                            bool *ok,
+                                            TransactionType defaultValue)
+{
+    const QString normalizedType = type.trimmed().toLower();
+
+    if (normalizedType == QStringLiteral("income")) {
+        if (ok) {
+            *ok = true;
+        }
+        return TransactionType::Income;
+    }
+
+    if (normalizedType == QStringLiteral("expense")) {
+        if (ok) {
+            *ok = true;
+        }
+        return TransactionType::Expense;
+    }
+
+    if (ok) {
+        *ok = false;
+    }
+    return defaultValue;
+}
+
 int Transaction::id() const
 {
     return m_id;
@@ -31,12 +69,12 @@ void Transaction::setId(int id)
     m_id = id;
 }
 
-Transaction::Type Transaction::type() const
+TransactionType Transaction::type() const
 {
     return m_type;
 }
 
-void Transaction::setType(Type type)
+void Transaction::setType(TransactionType type)
 {
     m_type = type;
 }
@@ -100,4 +138,3 @@ void Transaction::setUpdatedAt(const QString &updatedAt)
 {
     m_updatedAt = updatedAt;
 }
-

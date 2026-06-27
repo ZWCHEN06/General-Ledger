@@ -2,17 +2,17 @@
 
 #include <QString>
 
+enum class TransactionType {
+    Income,
+    Expense
+};
+
 class Transaction
 {
 public:
-    enum class Type {
-        Income,
-        Expense
-    };
-
     Transaction();
     Transaction(int id,
-                Type type,
+                TransactionType type,
                 double amount,
                 const QString &category,
                 const QString &date,
@@ -20,11 +20,16 @@ public:
                 const QString &createdAt,
                 const QString &updatedAt);
 
+    static QString typeToString(TransactionType type);
+    static TransactionType typeFromString(const QString &type,
+                                          bool *ok = nullptr,
+                                          TransactionType defaultValue = TransactionType::Expense);
+
     int id() const;
     void setId(int id);
 
-    Type type() const;
-    void setType(Type type);
+    TransactionType type() const;
+    void setType(TransactionType type);
 
     double amount() const;
     void setAmount(double amount);
@@ -46,7 +51,7 @@ public:
 
 private:
     int m_id = 0;
-    Type m_type = Type::Expense;
+    TransactionType m_type = TransactionType::Expense;
     double m_amount = 0.0;
     QString m_category;
     QString m_date;
@@ -54,4 +59,3 @@ private:
     QString m_createdAt;
     QString m_updatedAt;
 };
-
