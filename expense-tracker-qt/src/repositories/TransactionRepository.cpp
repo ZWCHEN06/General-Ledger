@@ -223,3 +223,31 @@ bool TransactionRepository::updateTransaction(const Transaction &transaction)
 
     return query.numRowsAffected() > 0;
 }
+
+bool TransactionRepository::deleteTransaction(int id)
+{
+    if (!m_database.isOpen()) {
+        qWarning().noquote() << "删除交易失败：数据库未打开";
+        return false;
+    }
+
+    QSqlQuery query(m_database);
+    const bool prepared = query.prepare(QStringLiteral(R"(
+        DELETE FROM transactions
+        WHERE id = :id
+    )"));
+
+    if (!prepared) {
+        qWarning().noquote() << "删除交易失败：SQL 准备失败:" << query.lastError().text();
+        return false;
+    }
+
+    query.bindValue(QStringLiteral(":id"), id);
+
+    if (!query.exec()) {
+        qWarning().noquote() << "删除交易失败：SQL 执行失败:" << query.lastError().text();
+        return false;
+    }
+
+    return query.numRowsAffected() > 0;
+}
