@@ -16,6 +16,8 @@ qt_add_executable(expense-tracker-qt
     src/database/DatabaseManager.h
     src/models/Transaction.cpp
     src/models/Transaction.h
+    src/repositories/TransactionRepository.cpp
+    src/repositories/TransactionRepository.h
 )
 
 qt_add_qml_module(expense-tracker-qt
