@@ -2,4 +2,4 @@ build/
 build-*/
 *.user
 *.user.*
-
+expense-tracker-qt/expense_tracker.db
