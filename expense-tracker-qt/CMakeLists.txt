@@ -12,6 +12,8 @@ qt_policy(SET QTP0004 NEW)
 
 qt_add_executable(expense-tracker-qt
     main.cpp
+    src/models/Transaction.cpp
+    src/models/Transaction.h
 )
 
 qt_add_qml_module(expense-tracker-qt
