@@ -182,3 +182,44 @@ std::optional<Transaction> TransactionRepository::getTransactionById(int id)
 
     return transactionFromCurrentRow(query);
 }
+
+bool TransactionRepository::updateTransaction(const Transaction &transaction)
+{
+    if (!m_database.isOpen()) {
+        qWarning().noquote() << "更新交易失败：数据库未打开";
+        return false;
+    }
+
+    QSqlQuery query(m_database);
+    const bool prepared = query.prepare(QStringLiteral(R"(
+        UPDATE transactions
+        SET
+            type = :type,
+            amount = :amount,
+            category = :category,
+            date = :date,
+            note = :note,
+            updated_at = :updated_at
+        WHERE id = :id
+    )"));
+
+    if (!prepared) {
+        qWarning().noquote() << "更新交易失败：SQL 准备失败:" << query.lastError().text();
+        return false;
+    }
+
+    query.bindValue(QStringLiteral(":id"), transaction.id());
+    query.bindValue(QStringLiteral(":type"), Transaction::typeToString(transaction.type()));
+    query.bindValue(QStringLiteral(":amount"), transaction.amount());
+    query.bindValue(QStringLiteral(":category"), transaction.category());
+    query.bindValue(QStringLiteral(":date"), transaction.date());
+    query.bindValue(QStringLiteral(":note"), transaction.note());
+    query.bindValue(QStringLiteral(":updated_at"), QDateTime::currentDateTime().toString(Qt::ISODate));
+
+    if (!query.exec()) {
+        qWarning().noquote() << "更新交易失败：SQL 执行失败:" << query.lastError().text();
+        return false;
+    }
+
+    return query.numRowsAffected() > 0;
+}

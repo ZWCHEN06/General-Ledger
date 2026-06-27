@@ -15,6 +15,7 @@ public:
     int addTransaction(const Transaction &transaction);
     QList<Transaction> getAllTransactions();
     std::optional<Transaction> getTransactionById(int id);
+    bool updateTransaction(const Transaction &transaction);
 
 private:
     QSqlDatabase m_database;
