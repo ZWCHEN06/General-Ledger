@@ -21,6 +21,13 @@ public:
                                            const QString &date,
                                            const QString &note);
     Q_INVOKABLE QVariantMap currentMonthSummary() const;
+    Q_INVOKABLE QVariantMap getTransactionById(int id) const;
+    Q_INVOKABLE QVariantMap updateTransaction(int id,
+                                              const QString &type,
+                                              const QString &amount,
+                                              const QString &category,
+                                              const QString &date,
+                                              const QString &note);
 
 private:
     TransactionRepository *m_transactionRepository = nullptr;

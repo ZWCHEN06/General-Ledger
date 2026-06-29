@@ -6,6 +6,8 @@ import "qml/pages"
 Window {
     id: root
 
+    property int editingTransactionId: 0
+
     width: 480
     height: 320
     visible: true
@@ -32,6 +34,29 @@ Window {
 
         AddTransactionPage {
             onTransactionSaved: pageLoader.sourceComponent = homePageComponent
+        }
+    }
+
+    Component {
+        id: transactionListPageComponent
+
+        TransactionListPage {
+            onEditTransactionRequested: function(transactionId) {
+                root.editingTransactionId = transactionId
+                pageLoader.sourceComponent = editTransactionPageComponent
+            }
+        }
+    }
+
+    Component {
+        id: editTransactionPageComponent
+
+        EditTransactionPage {
+            transactionId: root.editingTransactionId
+            onTransactionUpdated: {
+                transactionListModel.refresh()
+                pageLoader.sourceComponent = transactionListPageComponent
+            }
         }
     }
 }

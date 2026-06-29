@@ -18,7 +18,8 @@ public:
         AmountRole,
         CategoryRole,
         DateRole,
-        NoteRole
+        NoteRole,
+        TransactionIdRole
     };
 
     explicit TransactionListModel(QObject *parent = nullptr);

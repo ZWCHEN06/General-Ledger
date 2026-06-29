@@ -6,6 +6,31 @@
 
 #include <QDate>
 
+namespace {
+QVariantMap failureResult(const QString &message)
+{
+    return QVariantMap {
+        {QStringLiteral("success"), false},
+        {QStringLiteral("errorMessage"), message},
+        {QStringLiteral("id"), -1}
+    };
+}
+
+QVariantMap transactionToMap(const Transaction &transaction)
+{
+    return QVariantMap {
+        {QStringLiteral("success"), true},
+        {QStringLiteral("errorMessage"), QString()},
+        {QStringLiteral("id"), transaction.id()},
+        {QStringLiteral("type"), Transaction::typeToString(transaction.type())},
+        {QStringLiteral("amount"), transaction.amount()},
+        {QStringLiteral("category"), transaction.category()},
+        {QStringLiteral("date"), transaction.date()},
+        {QStringLiteral("note"), transaction.note()}
+    };
+}
+}
+
 AppController::AppController(QObject *parent)
     : QObject(parent)
 {
@@ -28,28 +53,20 @@ QVariantMap AppController::addTransaction(const QString &type,
                                           const QString &date,
                                           const QString &note)
 {
-    auto failure = [](const QString &message) {
-        return QVariantMap {
-            {QStringLiteral("success"), false},
-            {QStringLiteral("errorMessage"), message},
-            {QStringLiteral("id"), -1}
-        };
-    };
-
     if (!m_transactionRepository) {
-        return failure(QStringLiteral("账单仓库未初始化"));
+        return failureResult(QStringLiteral("账单仓库未初始化"));
     }
 
     bool typeOk = false;
     const TransactionType transactionType = Transaction::typeFromString(type, &typeOk);
     if (!typeOk) {
-        return failure(QStringLiteral("账单类型不正确"));
+        return failureResult(QStringLiteral("账单类型不正确"));
     }
 
     bool amountOk = false;
     const double transactionAmount = amount.trimmed().toDouble(&amountOk);
     if (!amountOk) {
-        return failure(QStringLiteral("金额格式不正确"));
+        return failureResult(QStringLiteral("金额格式不正确"));
     }
 
     Transaction transaction(
@@ -64,12 +81,75 @@ QVariantMap AppController::addTransaction(const QString &type,
 
     QString validationError;
     if (!transaction.validate(&validationError)) {
-        return failure(validationError);
+        return failureResult(validationError);
     }
 
     const int id = m_transactionRepository->addTransaction(transaction);
     if (id <= 0) {
-        return failure(QStringLiteral("保存账单失败，请稍后重试"));
+        return failureResult(QStringLiteral("保存账单失败，请稍后重试"));
+    }
+
+    return QVariantMap {
+        {QStringLiteral("success"), true},
+        {QStringLiteral("errorMessage"), QString()},
+        {QStringLiteral("id"), id}
+    };
+}
+
+QVariantMap AppController::getTransactionById(int id) const
+{
+    if (!m_transactionRepository) {
+        return failureResult(QStringLiteral("账单仓库未初始化"));
+    }
+
+    const std::optional<Transaction> transaction = m_transactionRepository->getTransactionById(id);
+    if (!transaction.has_value()) {
+        return failureResult(QStringLiteral("未找到账单记录"));
+    }
+
+    return transactionToMap(transaction.value());
+}
+
+QVariantMap AppController::updateTransaction(int id,
+                                             const QString &type,
+                                             const QString &amount,
+                                             const QString &category,
+                                             const QString &date,
+                                             const QString &note)
+{
+    if (!m_transactionRepository) {
+        return failureResult(QStringLiteral("账单仓库未初始化"));
+    }
+
+    bool typeOk = false;
+    const TransactionType transactionType = Transaction::typeFromString(type, &typeOk);
+    if (!typeOk) {
+        return failureResult(QStringLiteral("账单类型不正确"));
+    }
+
+    bool amountOk = false;
+    const double transactionAmount = amount.trimmed().toDouble(&amountOk);
+    if (!amountOk) {
+        return failureResult(QStringLiteral("金额格式不正确"));
+    }
+
+    Transaction transaction(
+        id,
+        transactionType,
+        transactionAmount,
+        category.trimmed(),
+        date.trimmed(),
+        note.trimmed(),
+        QString(),
+        QString());
+
+    QString validationError;
+    if (!transaction.validate(&validationError)) {
+        return failureResult(validationError);
+    }
+
+    if (!m_transactionRepository->updateTransaction(transaction)) {
+        return failureResult(QStringLiteral("更新账单失败，请确认记录是否存在"));
     }
 
     return QVariantMap {

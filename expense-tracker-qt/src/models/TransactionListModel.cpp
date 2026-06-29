@@ -32,6 +32,7 @@ QVariant TransactionListModel::data(const QModelIndex &index, int role) const
 
     switch (role) {
     case IdRole:
+    case TransactionIdRole:
         return transaction.id();
     case TypeRole:
         return Transaction::typeToString(transaction.type());
@@ -56,7 +57,8 @@ QHash<int, QByteArray> TransactionListModel::roleNames() const
         {AmountRole, "amount"},
         {CategoryRole, "category"},
         {DateRole, "date"},
-        {NoteRole, "note"}
+        {NoteRole, "note"},
+        {TransactionIdRole, "transactionId"}
     };
 }
 

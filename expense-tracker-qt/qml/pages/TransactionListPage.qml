@@ -5,6 +5,8 @@ import QtQuick
 Item {
     id: root
 
+    signal editTransactionRequested(int transactionId)
+
     Component.onCompleted: transactionListModel.refresh()
 
     ListView {
@@ -29,6 +31,7 @@ Item {
             id: transactionItem
 
             required property string type
+            required property int transactionId
             required property real amount
             required property string category
             required property string date
@@ -46,6 +49,12 @@ Item {
             radius: 8
             color: "#ffffff"
             border.color: "#e0e0e0"
+
+            MouseArea {
+                anchors.fill: parent
+                cursorShape: Qt.PointingHandCursor
+                onClicked: root.editTransactionRequested(transactionItem.transactionId)
+            }
 
             Rectangle {
                 anchors.left: parent.left
