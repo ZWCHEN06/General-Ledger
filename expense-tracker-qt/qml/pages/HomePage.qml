@@ -3,9 +3,8 @@ import QtQuick
 Item {
     Text {
         anchors.centerIn: parent
-        text: "记账 App"
+        text: appController.testMessage()
         color: "#202124"
         font.pixelSize: 32
     }
 }
-
