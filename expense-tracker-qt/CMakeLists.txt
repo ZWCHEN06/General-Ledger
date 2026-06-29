@@ -35,6 +35,7 @@ qt_add_qml_module(expense-tracker-qt
     VERSION 1.0
     QML_FILES
         Main.qml
+        qml/pages/AddTransactionPage.qml
         qml/pages/HomePage.qml
 )
 
