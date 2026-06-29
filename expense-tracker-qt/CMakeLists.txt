@@ -12,6 +12,8 @@ qt_policy(SET QTP0004 NEW)
 
 qt_add_executable(expense-tracker-qt
     main.cpp
+    src/AppController.cpp
+    src/AppController.h
     src/database/DatabaseManager.cpp
     src/database/DatabaseManager.h
     src/models/Transaction.cpp

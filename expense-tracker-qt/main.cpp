@@ -1,8 +1,10 @@
+#include "src/AppController.h"
 #include "src/database/DatabaseManager.h"
 
 #include <QDebug>
 #include <QGuiApplication>
 #include <QQmlApplicationEngine>
+#include <QQmlContext>
 
 int main(int argc, char *argv[])
 {
@@ -16,6 +18,9 @@ int main(int argc, char *argv[])
     }
 
     QQmlApplicationEngine engine;
+    AppController appController;
+    engine.rootContext()->setContextProperty(QStringLiteral("appController"), &appController);
+
     QObject::connect(
         &engine,
         &QQmlApplicationEngine::objectCreationFailed,
