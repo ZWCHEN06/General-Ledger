@@ -12,6 +12,7 @@ public:
     void closeDatabase();
     bool isOpen() const;
     bool initializeTables();
+    QSqlDatabase database() const;
 
 private:
     static constexpr const char *ConnectionName = "expense_tracker_connection";

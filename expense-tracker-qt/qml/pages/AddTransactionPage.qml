@@ -5,8 +5,11 @@ import QtQuick
 Item {
     id: root
 
+    signal transactionSaved()
+
     property string transactionType: "expense"
     property string selectedCategory: "餐饮"
+    property string errorMessage: ""
 
     readonly property var expenseCategories: ["餐饮", "交通", "购物", "娱乐"]
     readonly property var incomeCategories: ["工资", "奖金", "兼职", "其他"]
@@ -16,11 +19,21 @@ Item {
     }
 
     function saveTransaction() {
-        console.log("记账类型:", transactionType)
-        console.log("金额:", amountField.text)
-        console.log("分类:", selectedCategory)
-        console.log("日期:", dateField.text)
-        console.log("备注:", noteField.text)
+        const result = appController.addTransaction(
+            transactionType,
+            amountField.text,
+            selectedCategory,
+            dateField.text,
+            noteField.text
+        )
+
+        if (result.success) {
+            errorMessage = ""
+            transactionSaved()
+            return
+        }
+
+        errorMessage = result.errorMessage
     }
 
     Flickable {
@@ -121,6 +134,15 @@ Item {
                 width: parent.width
                 label: "备注"
                 placeholder: "可选"
+            }
+
+            Text {
+                width: parent.width
+                text: root.errorMessage
+                color: "#b3261e"
+                font.pixelSize: 15
+                wrapMode: Text.WordWrap
+                visible: root.errorMessage.length > 0
             }
         }
     }

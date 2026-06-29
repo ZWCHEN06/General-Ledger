@@ -3,6 +3,8 @@ import QtQuick
 Item {
     id: root
 
+    signal addTransactionRequested()
+
     readonly property real monthlyIncome: 8600.00
     readonly property real monthlyExpense: 2348.50
     readonly property real monthlyBalance: monthlyIncome - monthlyExpense
@@ -73,6 +75,7 @@ Item {
 
             anchors.fill: parent
             cursorShape: Qt.PointingHandCursor
+            onClicked: root.addTransactionRequested()
         }
     }
 

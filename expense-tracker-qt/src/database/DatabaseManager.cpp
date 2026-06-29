@@ -40,6 +40,11 @@ bool DatabaseManager::isOpen() const
     return m_database.isOpen();
 }
 
+QSqlDatabase DatabaseManager::database() const
+{
+    return m_database;
+}
+
 bool DatabaseManager::initializeTables()
 {
     if (!openDatabase()) {

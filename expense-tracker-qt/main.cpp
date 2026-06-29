@@ -1,6 +1,7 @@
 #include "src/AppController.h"
 #include "src/database/DatabaseManager.h"
 #include "src/models/TransactionListModel.h"
+#include "src/repositories/TransactionRepository.h"
 
 #include <QDebug>
 #include <QGuiApplication>
@@ -19,7 +20,8 @@ int main(int argc, char *argv[])
     }
 
     QQmlApplicationEngine engine;
-    AppController appController;
+    TransactionRepository transactionRepository(databaseManager.database());
+    AppController appController(&transactionRepository);
     TransactionListModel transactionListModel;
     engine.rootContext()->setContextProperty(QStringLiteral("appController"), &appController);
     engine.rootContext()->setContextProperty(QStringLiteral("transactionListModel"), &transactionListModel);
