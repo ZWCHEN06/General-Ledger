@@ -5,6 +5,8 @@ import QtQuick
 Item {
     id: root
 
+    Component.onCompleted: transactionListModel.refresh()
+
     ListView {
         id: transactionListView
 
@@ -131,5 +133,13 @@ Item {
             width: transactionListView.width
             height: 12
         }
+    }
+
+    Text {
+        anchors.centerIn: parent
+        text: "暂无账单记录"
+        color: "#5f6368"
+        font.pixelSize: 18
+        visible: transactionListView.count === 0
     }
 }

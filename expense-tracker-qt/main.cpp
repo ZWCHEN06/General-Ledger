@@ -22,7 +22,7 @@ int main(int argc, char *argv[])
     QQmlApplicationEngine engine;
     TransactionRepository transactionRepository(databaseManager.database());
     AppController appController(&transactionRepository);
-    TransactionListModel transactionListModel;
+    TransactionListModel transactionListModel(&transactionRepository);
     engine.rootContext()->setContextProperty(QStringLiteral("appController"), &appController);
     engine.rootContext()->setContextProperty(QStringLiteral("transactionListModel"), &transactionListModel);
 

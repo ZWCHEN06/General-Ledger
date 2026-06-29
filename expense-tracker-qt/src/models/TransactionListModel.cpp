@@ -1,33 +1,15 @@
 #include "TransactionListModel.h"
 
+#include "../repositories/TransactionRepository.h"
+
 TransactionListModel::TransactionListModel(QObject *parent)
+    : QAbstractListModel(parent)
+{
+}
+
+TransactionListModel::TransactionListModel(TransactionRepository *transactionRepository, QObject *parent)
     : QAbstractListModel(parent),
-      m_transactions({
-          Transaction(1,
-                      TransactionType::Expense,
-                      35.50,
-                      QStringLiteral("餐饮"),
-                      QStringLiteral("2026-06-29"),
-                      QStringLiteral("午餐"),
-                      QStringLiteral("2026-06-29T12:00:00"),
-                      QStringLiteral("2026-06-29T12:00:00")),
-          Transaction(2,
-                      TransactionType::Income,
-                      5000.00,
-                      QStringLiteral("工资"),
-                      QStringLiteral("2026-06-28"),
-                      QStringLiteral("六月工资"),
-                      QStringLiteral("2026-06-28T09:00:00"),
-                      QStringLiteral("2026-06-28T09:00:00")),
-          Transaction(3,
-                      TransactionType::Expense,
-                      128.00,
-                      QStringLiteral("交通"),
-                      QStringLiteral("2026-06-27"),
-                      QStringLiteral("高铁"),
-                      QStringLiteral("2026-06-27T18:30:00"),
-                      QStringLiteral("2026-06-27T18:30:00"))
-      })
+      m_transactionRepository(transactionRepository)
 {
 }
 
@@ -78,10 +60,24 @@ QHash<int, QByteArray> TransactionListModel::roleNames() const
     };
 }
 
+void TransactionListModel::refresh()
+{
+    if (!m_transactionRepository) {
+        setTransactions({});
+        return;
+    }
+
+    setTransactions(m_transactionRepository->getAllTransactions());
+}
+
+void TransactionListModel::setTransactionRepository(TransactionRepository *transactionRepository)
+{
+    m_transactionRepository = transactionRepository;
+}
+
 void TransactionListModel::setTransactions(const QList<Transaction> &transactions)
 {
     beginResetModel();
     m_transactions = transactions;
     endResetModel();
 }
-
