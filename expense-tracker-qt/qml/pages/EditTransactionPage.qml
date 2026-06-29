@@ -6,12 +6,14 @@ Item {
     id: root
 
     signal transactionUpdated()
+    signal transactionDeleted()
 
     required property int transactionId
 
     property string transactionType: "expense"
     property string selectedCategory: "餐饮"
     property string errorMessage: ""
+    property bool confirmDeleteVisible: false
 
     readonly property var expenseCategories: ["餐饮", "交通", "购物", "娱乐"]
     readonly property var incomeCategories: ["工资", "奖金", "兼职", "其他"]
@@ -54,6 +56,19 @@ Item {
         errorMessage = result.errorMessage
     }
 
+    function deleteTransaction() {
+        const result = appController.deleteTransaction(transactionId)
+        if (result.success) {
+            errorMessage = ""
+            confirmDeleteVisible = false
+            transactionDeleted()
+            return
+        }
+
+        confirmDeleteVisible = false
+        errorMessage = result.errorMessage
+    }
+
     Component.onCompleted: loadTransaction()
 
     Flickable {
@@ -62,7 +77,7 @@ Item {
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.top: parent.top
-        anchors.bottom: saveButton.top
+        anchors.bottom: actionButtons.top
         anchors.margins: 24
         anchors.bottomMargin: 16
         clip: true
@@ -167,31 +182,165 @@ Item {
         }
     }
 
-    Rectangle {
-        id: saveButton
+    Row {
+        id: actionButtons
 
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.bottom: parent.bottom
         anchors.margins: 24
         height: 48
-        radius: 8
-        color: saveMouseArea.pressed ? "#185abc" : "#1a73e8"
+        spacing: 12
 
-        Text {
-            anchors.centerIn: parent
-            text: "保存修改"
-            color: "#ffffff"
-            font.pixelSize: 18
-            font.bold: true
+        Rectangle {
+            id: deleteButton
+
+            width: (parent.width - parent.spacing) / 2
+            height: parent.height
+            radius: 8
+            color: deleteMouseArea.pressed ? "#a50e0e" : "#b3261e"
+
+            Text {
+                anchors.centerIn: parent
+                text: "删除"
+                color: "#ffffff"
+                font.pixelSize: 18
+                font.bold: true
+            }
+
+            MouseArea {
+                id: deleteMouseArea
+
+                anchors.fill: parent
+                cursorShape: Qt.PointingHandCursor
+                onClicked: root.confirmDeleteVisible = true
+            }
         }
 
-        MouseArea {
-            id: saveMouseArea
+        Rectangle {
+            id: saveButton
 
+            width: (parent.width - parent.spacing) / 2
+            height: parent.height
+            radius: 8
+            color: saveMouseArea.pressed ? "#185abc" : "#1a73e8"
+
+            Text {
+                anchors.centerIn: parent
+                text: "保存修改"
+                color: "#ffffff"
+                font.pixelSize: 18
+                font.bold: true
+            }
+
+            MouseArea {
+                id: saveMouseArea
+
+                anchors.fill: parent
+                cursorShape: Qt.PointingHandCursor
+                onClicked: root.saveTransaction()
+            }
+        }
+    }
+
+    Rectangle {
+        anchors.fill: parent
+        color: "#80000000"
+        visible: root.confirmDeleteVisible
+
+        MouseArea {
             anchors.fill: parent
-            cursorShape: Qt.PointingHandCursor
-            onClicked: root.saveTransaction()
+        }
+
+        Rectangle {
+            anchors.centerIn: parent
+            width: Math.min(parent.width - 48, 320)
+            height: 172
+            radius: 8
+            color: "#ffffff"
+            border.color: "#dadce0"
+
+            Text {
+                id: confirmTitle
+
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.top: parent.top
+                anchors.margins: 20
+                text: "确认删除账单？"
+                color: "#202124"
+                font.pixelSize: 20
+                font.bold: true
+            }
+
+            Text {
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.top: confirmTitle.bottom
+                anchors.leftMargin: 20
+                anchors.rightMargin: 20
+                anchors.topMargin: 10
+                text: "删除后无法在当前版本中恢复。"
+                color: "#5f6368"
+                font.pixelSize: 15
+                wrapMode: Text.WordWrap
+            }
+
+            Row {
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.bottom: parent.bottom
+                anchors.margins: 20
+                height: 40
+                spacing: 12
+
+                Rectangle {
+                    width: (parent.width - parent.spacing) / 2
+                    height: parent.height
+                    radius: 8
+                    color: cancelDeleteMouseArea.pressed ? "#f1f3f4" : "#ffffff"
+                    border.color: "#dadce0"
+
+                    Text {
+                        anchors.centerIn: parent
+                        text: "取消"
+                        color: "#3c4043"
+                        font.pixelSize: 16
+                        font.bold: true
+                    }
+
+                    MouseArea {
+                        id: cancelDeleteMouseArea
+
+                        anchors.fill: parent
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: root.confirmDeleteVisible = false
+                    }
+                }
+
+                Rectangle {
+                    width: (parent.width - parent.spacing) / 2
+                    height: parent.height
+                    radius: 8
+                    color: confirmDeleteMouseArea.pressed ? "#a50e0e" : "#b3261e"
+
+                    Text {
+                        anchors.centerIn: parent
+                        text: "确认删除"
+                        color: "#ffffff"
+                        font.pixelSize: 16
+                        font.bold: true
+                    }
+
+                    MouseArea {
+                        id: confirmDeleteMouseArea
+
+                        anchors.fill: parent
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: root.deleteTransaction()
+                    }
+                }
+            }
         }
     }
 

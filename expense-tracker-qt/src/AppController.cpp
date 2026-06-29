@@ -159,6 +159,23 @@ QVariantMap AppController::updateTransaction(int id,
     };
 }
 
+QVariantMap AppController::deleteTransaction(int id)
+{
+    if (!m_transactionRepository) {
+        return failureResult(QStringLiteral("账单仓库未初始化"));
+    }
+
+    if (!m_transactionRepository->deleteTransaction(id)) {
+        return failureResult(QStringLiteral("删除账单失败，请确认记录是否存在"));
+    }
+
+    return QVariantMap {
+        {QStringLiteral("success"), true},
+        {QStringLiteral("errorMessage"), QString()},
+        {QStringLiteral("id"), id}
+    };
+}
+
 QVariantMap AppController::currentMonthSummary() const
 {
     if (!m_transactionRepository) {

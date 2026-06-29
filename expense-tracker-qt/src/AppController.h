@@ -28,6 +28,7 @@ public:
                                               const QString &category,
                                               const QString &date,
                                               const QString &note);
+    Q_INVOKABLE QVariantMap deleteTransaction(int id);
 
 private:
     TransactionRepository *m_transactionRepository = nullptr;

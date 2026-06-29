@@ -57,6 +57,10 @@ Window {
                 transactionListModel.refresh()
                 pageLoader.sourceComponent = transactionListPageComponent
             }
+            onTransactionDeleted: {
+                transactionListModel.refresh()
+                pageLoader.sourceComponent = transactionListPageComponent
+            }
         }
     }
 }
