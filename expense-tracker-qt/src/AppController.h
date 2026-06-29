@@ -20,6 +20,7 @@ public:
                                            const QString &category,
                                            const QString &date,
                                            const QString &note);
+    Q_INVOKABLE QVariantMap currentMonthSummary() const;
 
 private:
     TransactionRepository *m_transactionRepository = nullptr;

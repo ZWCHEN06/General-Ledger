@@ -5,9 +5,28 @@ Item {
 
     signal addTransactionRequested()
 
-    readonly property real monthlyIncome: 8600.00
-    readonly property real monthlyExpense: 2348.50
-    readonly property real monthlyBalance: monthlyIncome - monthlyExpense
+    property real monthlyIncome: 0.00
+    property real monthlyExpense: 0.00
+    property real monthlyBalance: 0.00
+    property string errorMessage: ""
+
+    function refreshSummary() {
+        const result = appController.currentMonthSummary()
+        if (!result.success) {
+            errorMessage = result.errorMessage
+            monthlyIncome = 0.00
+            monthlyExpense = 0.00
+            monthlyBalance = 0.00
+            return
+        }
+
+        errorMessage = ""
+        monthlyIncome = result.income
+        monthlyExpense = result.expense
+        monthlyBalance = result.balance
+    }
+
+    Component.onCompleted: refreshSummary()
 
     Column {
         id: contentColumn
@@ -47,6 +66,15 @@ Item {
                 title: "本月结余"
                 amount: root.monthlyBalance
                 amountColor: "#1f5fbf"
+            }
+
+            Text {
+                width: parent.width
+                text: root.errorMessage
+                color: "#b3261e"
+                font.pixelSize: 15
+                wrapMode: Text.WordWrap
+                visible: root.errorMessage.length > 0
             }
         }
     }

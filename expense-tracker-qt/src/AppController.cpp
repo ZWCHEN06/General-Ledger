@@ -2,6 +2,9 @@
 
 #include "models/Transaction.h"
 #include "repositories/TransactionRepository.h"
+#include "services/SummaryService.h"
+
+#include <QDate>
 
 AppController::AppController(QObject *parent)
     : QObject(parent)
@@ -73,5 +76,33 @@ QVariantMap AppController::addTransaction(const QString &type,
         {QStringLiteral("success"), true},
         {QStringLiteral("errorMessage"), QString()},
         {QStringLiteral("id"), id}
+    };
+}
+
+QVariantMap AppController::currentMonthSummary() const
+{
+    if (!m_transactionRepository) {
+        return QVariantMap {
+            {QStringLiteral("success"), false},
+            {QStringLiteral("errorMessage"), QStringLiteral("账单仓库未初始化")},
+            {QStringLiteral("income"), 0.0},
+            {QStringLiteral("expense"), 0.0},
+            {QStringLiteral("balance"), 0.0}
+        };
+    }
+
+    const QDate currentDate = QDate::currentDate();
+    const QList<Transaction> transactions =
+        m_transactionRepository->getTransactionsByMonth(currentDate.year(), currentDate.month());
+
+    const SummaryService summaryService;
+    const SummaryResult summary = summaryService.calculate(transactions);
+
+    return QVariantMap {
+        {QStringLiteral("success"), true},
+        {QStringLiteral("errorMessage"), QString()},
+        {QStringLiteral("income"), summary.totalIncome},
+        {QStringLiteral("expense"), summary.totalExpense},
+        {QStringLiteral("balance"), summary.balance}
     };
 }
