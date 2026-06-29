@@ -2,6 +2,7 @@
 
 #include "../models/Transaction.h"
 
+#include <QDate>
 #include <QDateTime>
 #include <QDebug>
 #include <QSqlError>
@@ -128,6 +129,63 @@ QList<Transaction> TransactionRepository::getAllTransactions()
 
     if (!query.exec()) {
         qWarning().noquote() << "查询交易失败：SQL 执行失败:" << query.lastError().text();
+        return transactions;
+    }
+
+    while (query.next()) {
+        const std::optional<Transaction> transaction = transactionFromCurrentRow(query);
+        if (transaction.has_value()) {
+            transactions.append(transaction.value());
+        }
+    }
+
+    return transactions;
+}
+
+QList<Transaction> TransactionRepository::getTransactionsByMonth(int year, int month)
+{
+    QList<Transaction> transactions;
+
+    if (!m_database.isOpen()) {
+        qWarning().noquote() << "按月份查询交易失败：数据库未打开";
+        return transactions;
+    }
+
+    const QDate startDate(year, month, 1);
+    if (!startDate.isValid()) {
+        qWarning().noquote() << "按月份查询交易失败：年份或月份非法，year:" << year << "month:" << month;
+        return transactions;
+    }
+
+    const QDate endDate = startDate.addMonths(1);
+
+    QSqlQuery query(m_database);
+    const bool prepared = query.prepare(QStringLiteral(R"(
+        SELECT
+            id,
+            type,
+            amount,
+            category,
+            date,
+            note,
+            created_at,
+            updated_at
+        FROM transactions
+        WHERE date >= :start_date
+          AND date < :end_date
+        ORDER BY date DESC
+    )"));
+
+    if (!prepared) {
+        qWarning().noquote() << "按月份查询交易失败：SQL 准备失败:" << query.lastError().text();
+        return transactions;
+    }
+
+    query.bindValue(QStringLiteral(":start_date"), startDate.toString(QStringLiteral("yyyy-MM-dd")));
+    query.bindValue(QStringLiteral(":end_date"), endDate.toString(QStringLiteral("yyyy-MM-dd")));
+
+    if (!query.exec()) {
+        qWarning().noquote() << "按月份查询交易失败：SQL 执行失败:" << query.lastError().text();
         return transactions;
     }
 
