@@ -7,6 +7,7 @@
 #include <QGuiApplication>
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
+#include <QSqlError>
 
 int main(int argc, char *argv[])
 {
@@ -15,15 +16,30 @@ int main(int argc, char *argv[])
     QCoreApplication::setApplicationName(QStringLiteral("expense-tracker-qt"));
 
     DatabaseManager databaseManager;
+    bool databaseReady = false;
+    QString databaseErrorMessage;
+
     if (!databaseManager.openDatabase()) {
-        qWarning().noquote() << "打开 SQLite 数据库失败，界面将继续启动。";
+        const QString detail = databaseManager.database().lastError().text();
+        databaseErrorMessage = detail.isEmpty()
+            ? QStringLiteral("数据库打开失败，请检查数据库路径和文件权限")
+            : QStringLiteral("数据库打开失败：%1").arg(detail);
+        qWarning().noquote() << databaseErrorMessage;
     } else if (!databaseManager.initializeTables()) {
-        qWarning().noquote() << "初始化数据库表失败，界面将继续启动。";
+        const QString detail = databaseManager.database().lastError().text();
+        databaseErrorMessage = detail.isEmpty()
+            ? QStringLiteral("数据库初始化失败，请检查 transactions 表结构和 SQLite 日志")
+            : QStringLiteral("数据库初始化失败：%1").arg(detail);
+        qWarning().noquote() << databaseErrorMessage;
+    } else {
+        databaseReady = true;
     }
 
     QQmlApplicationEngine engine;
     TransactionRepository transactionRepository(databaseManager.database());
     AppController appController(&transactionRepository);
+    appController.setDatabaseStatus(databaseReady, databaseErrorMessage);
+
     TransactionListModel transactionListModel(&transactionRepository);
     engine.rootContext()->setContextProperty(QStringLiteral("appController"), &appController);
     engine.rootContext()->setContextProperty(QStringLiteral("transactionListModel"), &transactionListModel);

@@ -16,6 +16,14 @@ Item {
     readonly property int actionHeight: 52
 
     function refreshSummary() {
+        if (!appController.databaseReady) {
+            errorMessage = appController.databaseErrorMessage
+            monthlyIncome = 0.00
+            monthlyExpense = 0.00
+            monthlyBalance = 0.00
+            return
+        }
+
         const result = appController.currentMonthSummary()
         if (!result.success) {
             errorMessage = result.errorMessage
@@ -70,6 +78,7 @@ Item {
                 title: "本月收入"
                 amount: root.monthlyIncome
                 amountColor: "#1b7f45"
+                visible: root.errorMessage.length === 0
             }
 
             SummaryRow {
@@ -77,6 +86,7 @@ Item {
                 title: "本月支出"
                 amount: root.monthlyExpense
                 amountColor: "#b3261e"
+                visible: root.errorMessage.length === 0
             }
 
             SummaryRow {
@@ -84,6 +94,7 @@ Item {
                 title: "本月结余"
                 amount: root.monthlyBalance
                 amountColor: "#1f5fbf"
+                visible: root.errorMessage.length === 0
             }
 
             Text {

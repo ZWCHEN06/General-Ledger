@@ -10,7 +10,11 @@ Item {
     readonly property int pageMargin: Math.max(16, Math.min(24, Math.round(width * 0.05)))
     readonly property int bottomInset: Qt.platform.os === "android" ? 72 : pageMargin
 
-    Component.onCompleted: transactionListModel.refresh()
+    Component.onCompleted: {
+        if (appController.databaseReady) {
+            transactionListModel.refresh()
+        }
+    }
 
     ListView {
         id: transactionListView
@@ -21,6 +25,7 @@ Item {
         spacing: 10
         clip: true
         model: transactionListModel
+        visible: appController.databaseReady
 
         header: Text {
             width: transactionListView.width
@@ -186,6 +191,17 @@ Item {
         font.pixelSize: 18
         horizontalAlignment: Text.AlignHCenter
         wrapMode: Text.WordWrap
-        visible: transactionListView.count === 0
+        visible: appController.databaseReady && transactionListView.count === 0
+    }
+
+    Text {
+        anchors.centerIn: parent
+        width: Math.max(0, parent.width - root.pageMargin * 2)
+        text: appController.databaseErrorMessage
+        color: "#b3261e"
+        font.pixelSize: 18
+        horizontalAlignment: Text.AlignHCenter
+        wrapMode: Text.WordWrap
+        visible: !appController.databaseReady
     }
 }

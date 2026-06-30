@@ -79,6 +79,11 @@ bool DatabaseManager::openDatabase()
         return true;
     }
 
+    if (m_database.databaseName().trimmed().isEmpty()) {
+        qWarning().noquote() << "SQLite database path is empty.";
+        return false;
+    }
+
     return m_database.open();
 }
 

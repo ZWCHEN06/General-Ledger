@@ -43,6 +43,36 @@ AppController::AppController(TransactionRepository *transactionRepository, QObje
 {
 }
 
+bool AppController::databaseReady() const
+{
+    return m_databaseReady;
+}
+
+QString AppController::databaseErrorMessage() const
+{
+    return effectiveDatabaseErrorMessage();
+}
+
+void AppController::setDatabaseStatus(bool ready, const QString &errorMessage)
+{
+    if (m_databaseReady == ready && m_databaseErrorMessage == errorMessage) {
+        return;
+    }
+
+    m_databaseReady = ready;
+    m_databaseErrorMessage = errorMessage;
+    emit databaseStatusChanged();
+}
+
+QString AppController::effectiveDatabaseErrorMessage() const
+{
+    if (!m_databaseErrorMessage.trimmed().isEmpty()) {
+        return m_databaseErrorMessage;
+    }
+
+    return QStringLiteral("数据库不可用，请检查 SQLite 打开和初始化日志");
+}
+
 QString AppController::testMessage() const
 {
     return QStringLiteral("C++ 已连接");
@@ -54,6 +84,10 @@ QVariantMap AppController::addTransaction(const QString &type,
                                           const QString &date,
                                           const QString &note)
 {
+    if (!m_databaseReady) {
+        return failureResult(effectiveDatabaseErrorMessage());
+    }
+
     if (!m_transactionRepository) {
         return failureResult(QStringLiteral("账单仓库未初始化"));
     }
@@ -99,6 +133,10 @@ QVariantMap AppController::addTransaction(const QString &type,
 
 QVariantMap AppController::getTransactionById(int id) const
 {
+    if (!m_databaseReady) {
+        return failureResult(effectiveDatabaseErrorMessage());
+    }
+
     if (!m_transactionRepository) {
         return failureResult(QStringLiteral("账单仓库未初始化"));
     }
@@ -118,6 +156,10 @@ QVariantMap AppController::updateTransaction(int id,
                                              const QString &date,
                                              const QString &note)
 {
+    if (!m_databaseReady) {
+        return failureResult(effectiveDatabaseErrorMessage());
+    }
+
     if (!m_transactionRepository) {
         return failureResult(QStringLiteral("账单仓库未初始化"));
     }
@@ -162,6 +204,10 @@ QVariantMap AppController::updateTransaction(int id,
 
 QVariantMap AppController::deleteTransaction(int id)
 {
+    if (!m_databaseReady) {
+        return failureResult(effectiveDatabaseErrorMessage());
+    }
+
     if (!m_transactionRepository) {
         return failureResult(QStringLiteral("账单仓库未初始化"));
     }
@@ -179,6 +225,16 @@ QVariantMap AppController::deleteTransaction(int id)
 
 QVariantMap AppController::currentMonthSummary() const
 {
+    if (!m_databaseReady) {
+        return QVariantMap {
+            {QStringLiteral("success"), false},
+            {QStringLiteral("errorMessage"), effectiveDatabaseErrorMessage()},
+            {QStringLiteral("income"), 0.0},
+            {QStringLiteral("expense"), 0.0},
+            {QStringLiteral("balance"), 0.0}
+        };
+    }
+
     if (!m_transactionRepository) {
         return QVariantMap {
             {QStringLiteral("success"), false},
