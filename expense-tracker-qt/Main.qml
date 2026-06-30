@@ -26,6 +26,8 @@ Window {
 
         HomePage {
             onAddTransactionRequested: pageLoader.sourceComponent = addTransactionPageComponent
+            onTransactionListRequested: pageLoader.sourceComponent = transactionListPageComponent
+            onSettingsRequested: pageLoader.sourceComponent = settingsPageComponent
         }
     }
 
@@ -41,10 +43,19 @@ Window {
         id: transactionListPageComponent
 
         TransactionListPage {
+            onBackRequested: pageLoader.sourceComponent = homePageComponent
             onEditTransactionRequested: function(transactionId) {
                 root.editingTransactionId = transactionId
                 pageLoader.sourceComponent = editTransactionPageComponent
             }
+        }
+    }
+
+    Component {
+        id: settingsPageComponent
+
+        SettingsPage {
+            onBackRequested: pageLoader.sourceComponent = homePageComponent
         }
     }
 

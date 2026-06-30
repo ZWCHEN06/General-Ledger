@@ -6,6 +6,7 @@ Item {
     id: root
 
     signal editTransactionRequested(int transactionId)
+    signal backRequested()
     readonly property int pageMargin: Math.max(16, Math.min(24, Math.round(width * 0.05)))
     readonly property int bottomInset: Qt.platform.os === "android" ? 72 : pageMargin
 
@@ -144,6 +145,36 @@ Item {
         footer: Item {
             width: transactionListView.width
             height: root.bottomInset
+        }
+    }
+
+    Rectangle {
+        id: backButton
+
+        anchors.top: parent.top
+        anchors.right: parent.right
+        anchors.margins: root.pageMargin
+        width: 72
+        height: 40
+        z: 2
+        radius: 8
+        color: backMouseArea.pressed ? "#f1f3f4" : "#ffffff"
+        border.color: "#dadce0"
+
+        Text {
+            anchors.centerIn: parent
+            text: "返回"
+            color: "#3c4043"
+            font.pixelSize: 15
+            font.bold: true
+        }
+
+        MouseArea {
+            id: backMouseArea
+
+            anchors.fill: parent
+            cursorShape: Qt.PointingHandCursor
+            onClicked: root.backRequested()
         }
     }
 

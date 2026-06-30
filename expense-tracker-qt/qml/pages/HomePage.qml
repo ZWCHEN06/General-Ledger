@@ -4,6 +4,8 @@ Item {
     id: root
 
     signal addTransactionRequested()
+    signal transactionListRequested()
+    signal settingsRequested()
 
     property real monthlyIncome: 0.00
     property real monthlyExpense: 0.00
@@ -93,6 +95,26 @@ Item {
                 visible: root.errorMessage.length > 0
             }
         }
+
+        Row {
+            width: parent.width
+            height: 46
+            spacing: 10
+
+            NavigationButton {
+                width: (parent.width - parent.spacing) / 2
+                height: parent.height
+                text: "查看账单"
+                onClicked: root.transactionListRequested()
+            }
+
+            NavigationButton {
+                width: (parent.width - parent.spacing) / 2
+                height: parent.height
+                text: "设置"
+                onClicked: root.settingsRequested()
+            }
+        }
         }
     }
 
@@ -162,6 +184,34 @@ Item {
             font.bold: true
             horizontalAlignment: Text.AlignRight
             elide: Text.ElideRight
+        }
+    }
+
+    component NavigationButton: Rectangle {
+        id: navigationButton
+
+        required property string text
+        signal clicked()
+
+        radius: 8
+        color: navigationMouseArea.pressed ? "#f1f3f4" : "#ffffff"
+        border.color: "#dadce0"
+
+        Text {
+            anchors.centerIn: parent
+            text: navigationButton.text
+            color: "#202124"
+            font.pixelSize: 16
+            font.bold: true
+            elide: Text.ElideRight
+        }
+
+        MouseArea {
+            id: navigationMouseArea
+
+            anchors.fill: parent
+            cursorShape: Qt.PointingHandCursor
+            onClicked: navigationButton.clicked()
         }
     }
 }
