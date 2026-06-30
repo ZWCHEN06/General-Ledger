@@ -5,7 +5,6 @@
 #include "services/SummaryService.h"
 
 #include <QDate>
-#include <QStringList>
 
 namespace {
 QVariantMap failureResult(const QString &message)
@@ -31,40 +30,6 @@ QVariantMap transactionToMap(const Transaction &transaction)
     };
 }
 
-QString normalizeTransactionDate(const QString &date, bool *ok)
-{
-    const QString trimmedDate = date.trimmed();
-    QString separatorNormalizedDate = trimmedDate;
-    separatorNormalizedDate.replace(QStringLiteral("/"), QStringLiteral("-"));
-    separatorNormalizedDate.replace(QStringLiteral("."), QStringLiteral("-"));
-
-    const QStringList candidates {
-        trimmedDate,
-        separatorNormalizedDate
-    };
-    const QStringList formats {
-        QStringLiteral("yyyy-MM-dd"),
-        QStringLiteral("yyyy-M-d"),
-        QStringLiteral("yyyyMMdd")
-    };
-
-    for (const QString &candidate : candidates) {
-        for (const QString &format : formats) {
-            const QDate parsedDate = QDate::fromString(candidate, format);
-            if (parsedDate.isValid()) {
-                if (ok) {
-                    *ok = true;
-                }
-                return parsedDate.toString(QStringLiteral("yyyy-MM-dd"));
-            }
-        }
-    }
-
-    if (ok) {
-        *ok = false;
-    }
-    return trimmedDate;
-}
 }
 
 AppController::AppController(QObject *parent)
@@ -105,18 +70,12 @@ QVariantMap AppController::addTransaction(const QString &type,
         return failureResult(QStringLiteral("金额格式不正确"));
     }
 
-    bool dateOk = false;
-    const QString normalizedDate = normalizeTransactionDate(date, &dateOk);
-    if (!dateOk) {
-        return failureResult(QStringLiteral("日期格式不正确，请使用 YYYY-MM-DD"));
-    }
-
     Transaction transaction(
         0,
         transactionType,
         transactionAmount,
         category.trimmed(),
-        normalizedDate,
+        date.trimmed(),
         note.trimmed(),
         QString(),
         QString());
@@ -175,18 +134,12 @@ QVariantMap AppController::updateTransaction(int id,
         return failureResult(QStringLiteral("金额格式不正确"));
     }
 
-    bool dateOk = false;
-    const QString normalizedDate = normalizeTransactionDate(date, &dateOk);
-    if (!dateOk) {
-        return failureResult(QStringLiteral("日期格式不正确，请使用 YYYY-MM-DD"));
-    }
-
     Transaction transaction(
         id,
         transactionType,
         transactionAmount,
         category.trimmed(),
-        normalizedDate,
+        date.trimmed(),
         note.trimmed(),
         QString(),
         QString());

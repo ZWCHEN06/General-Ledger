@@ -1,5 +1,7 @@
 #include "Transaction.h"
 
+#include <QDate>
+
 Transaction::Transaction() = default;
 
 Transaction::Transaction(int id,
@@ -86,8 +88,15 @@ bool Transaction::validate(QString *errorMessage) const
         return false;
     }
 
-    if (m_date.trimmed().isEmpty()) {
+    const QString normalizedDate = m_date.trimmed();
+    if (normalizedDate.isEmpty()) {
         setError(QStringLiteral("日期不能为空"));
+        return false;
+    }
+
+    const QDate parsedDate = QDate::fromString(normalizedDate, QStringLiteral("yyyy-MM-dd"));
+    if (!parsedDate.isValid() || parsedDate.toString(QStringLiteral("yyyy-MM-dd")) != normalizedDate) {
+        setError(QStringLiteral("日期格式不正确，请使用 YYYY-MM-DD"));
         return false;
     }
 
