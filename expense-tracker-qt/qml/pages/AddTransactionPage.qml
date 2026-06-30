@@ -78,6 +78,11 @@ Item {
                     height: parent.height
                     label: "支出"
                     value: "expense"
+                    selected: root.transactionType === value
+                    onClicked: function(selectedType) {
+                        root.transactionType = selectedType
+                        root.selectedCategory = root.currentCategories()[0]
+                    }
                 }
 
                 TypeOption {
@@ -85,6 +90,11 @@ Item {
                     height: parent.height
                     label: "收入"
                     value: "income"
+                    selected: root.transactionType === value
+                    onClicked: function(selectedType) {
+                        root.transactionType = selectedType
+                        root.selectedCategory = root.currentCategories()[0]
+                    }
                 }
             }
 
@@ -178,34 +188,6 @@ Item {
             anchors.fill: parent
             cursorShape: Qt.PointingHandCursor
             onClicked: root.saveTransaction()
-        }
-    }
-
-    component TypeOption: Rectangle {
-        id: typeOption
-
-        required property string label
-        required property string value
-
-        radius: 8
-        color: root.transactionType === typeOption.value ? "#e8f0fe" : "#ffffff"
-        border.color: root.transactionType === typeOption.value ? "#1a73e8" : "#dadce0"
-
-        Text {
-            anchors.centerIn: parent
-            text: typeOption.label
-            color: root.transactionType === typeOption.value ? "#174ea6" : "#3c4043"
-            font.pixelSize: 16
-            font.bold: root.transactionType === typeOption.value
-        }
-
-        MouseArea {
-            anchors.fill: parent
-            cursorShape: Qt.PointingHandCursor
-            onClicked: {
-                root.transactionType = typeOption.value
-                root.selectedCategory = root.currentCategories()[0]
-            }
         }
     }
 
