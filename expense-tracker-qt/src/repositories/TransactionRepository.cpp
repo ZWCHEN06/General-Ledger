@@ -7,8 +7,10 @@
 #include <QDebug>
 #include <QSqlError>
 #include <QSqlQuery>
+#include <QStringList>
 #include <QVariant>
 
+#include <algorithm>
 #include <optional>
 
 namespace {
@@ -32,6 +34,35 @@ std::optional<Transaction> transactionFromCurrentRow(const QSqlQuery &query)
         query.value(QStringLiteral("note")).toString(),
         query.value(QStringLiteral("created_at")).toString(),
         query.value(QStringLiteral("updated_at")).toString());
+}
+
+QDate parseStoredTransactionDate(const QString &date)
+{
+    const QString trimmedDate = date.trimmed();
+    QString separatorNormalizedDate = trimmedDate;
+    separatorNormalizedDate.replace(QStringLiteral("/"), QStringLiteral("-"));
+    separatorNormalizedDate.replace(QStringLiteral("."), QStringLiteral("-"));
+
+    const QStringList candidates {
+        trimmedDate,
+        separatorNormalizedDate
+    };
+    const QStringList formats {
+        QStringLiteral("yyyy-MM-dd"),
+        QStringLiteral("yyyy-M-d"),
+        QStringLiteral("yyyyMMdd")
+    };
+
+    for (const QString &candidate : candidates) {
+        for (const QString &format : formats) {
+            const QDate parsedDate = QDate::fromString(candidate, format);
+            if (parsedDate.isValid()) {
+                return parsedDate;
+            }
+        }
+    }
+
+    return QDate();
 }
 }
 
@@ -171,18 +202,13 @@ QList<Transaction> TransactionRepository::getTransactionsByMonth(int year, int m
             created_at,
             updated_at
         FROM transactions
-        WHERE date >= :start_date
-          AND date < :end_date
-        ORDER BY date DESC
+        ORDER BY date DESC, id DESC
     )"));
 
     if (!prepared) {
         qWarning().noquote() << "按月份查询交易失败：SQL 准备失败:" << query.lastError().text();
         return transactions;
     }
-
-    query.bindValue(QStringLiteral(":start_date"), startDate.toString(QStringLiteral("yyyy-MM-dd")));
-    query.bindValue(QStringLiteral(":end_date"), endDate.toString(QStringLiteral("yyyy-MM-dd")));
 
     if (!query.exec()) {
         qWarning().noquote() << "按月份查询交易失败：SQL 执行失败:" << query.lastError().text();
@@ -192,9 +218,21 @@ QList<Transaction> TransactionRepository::getTransactionsByMonth(int year, int m
     while (query.next()) {
         const std::optional<Transaction> transaction = transactionFromCurrentRow(query);
         if (transaction.has_value()) {
-            transactions.append(transaction.value());
+            const QDate transactionDate = parseStoredTransactionDate(transaction->date());
+            if (transactionDate >= startDate && transactionDate < endDate) {
+                transactions.append(transaction.value());
+            }
         }
     }
+
+    std::sort(transactions.begin(), transactions.end(), [](const Transaction &left, const Transaction &right) {
+        const QDate leftDate = parseStoredTransactionDate(left.date());
+        const QDate rightDate = parseStoredTransactionDate(right.date());
+        if (leftDate == rightDate) {
+            return left.id() > right.id();
+        }
+        return leftDate > rightDate;
+    });
 
     return transactions;
 }
