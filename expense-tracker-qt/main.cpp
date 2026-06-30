@@ -11,6 +11,8 @@
 int main(int argc, char *argv[])
 {
     QGuiApplication app(argc, argv);
+    QCoreApplication::setOrganizationName(QStringLiteral("ExpenseTracker"));
+    QCoreApplication::setApplicationName(QStringLiteral("expense-tracker-qt"));
 
     DatabaseManager databaseManager;
     if (!databaseManager.openDatabase()) {
