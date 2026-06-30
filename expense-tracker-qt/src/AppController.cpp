@@ -2,9 +2,14 @@
 
 #include "models/Transaction.h"
 #include "repositories/TransactionRepository.h"
+#include "services/CsvExportService.h"
 #include "services/SummaryService.h"
 
 #include <QDate>
+#include <QDateTime>
+#include <QDir>
+#include <QFile>
+#include <QStandardPaths>
 
 namespace {
 QVariantMap failureResult(const QString &message)
@@ -259,4 +264,69 @@ QVariantMap AppController::currentMonthSummary() const
         {QStringLiteral("expense"), summary.totalExpense},
         {QStringLiteral("balance"), summary.balance}
     };
+}
+
+QVariantMap AppController::exportCsv() const
+{
+    if (!m_databaseReady) {
+        return failureResult(effectiveDatabaseErrorMessage());
+    }
+
+    if (!m_transactionRepository) {
+        return failureResult(QStringLiteral("账单仓库未初始化"));
+    }
+
+    const QList<Transaction> transactions = m_transactionRepository->getAllTransactions();
+    if (transactions.isEmpty()) {
+        return failureResult(QStringLiteral("暂无可导出的账单"));
+    }
+
+    const CsvExportService csvExportService;
+    const QString csvContent = csvExportService.exportTransactions(transactions);
+
+#ifdef Q_OS_ANDROID
+    Q_UNUSED(csvContent)
+    return failureResult(QStringLiteral("当前 Android 版暂未接入系统文件保存或分享能力，无法导出 CSV"));
+#else
+    QString documentsPath = QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation);
+    if (documentsPath.trimmed().isEmpty()) {
+        documentsPath = QStandardPaths::writableLocation(QStandardPaths::HomeLocation);
+    }
+
+    if (documentsPath.trimmed().isEmpty()) {
+        return failureResult(QStringLiteral("无法获取可写入的导出目录"));
+    }
+
+    QDir documentsDir(documentsPath);
+    if (!documentsDir.exists() && !QDir().mkpath(documentsPath)) {
+        return failureResult(QStringLiteral("无法创建导出目录：%1").arg(documentsPath));
+    }
+
+    const QString fileName = QStringLiteral("expense_transactions_%1.csv")
+        .arg(QDateTime::currentDateTime().toString(QStringLiteral("yyyyMMdd_HHmmss")));
+    const QString filePath = documentsDir.filePath(fileName);
+
+    QFile file(filePath);
+    if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
+        return failureResult(QStringLiteral("无法创建 CSV 文件：%1").arg(file.errorString()));
+    }
+
+    QByteArray output;
+    output.append("\xEF\xBB\xBF", 3);
+    output.append(csvContent.toUtf8());
+
+    const qint64 bytesWritten = file.write(output);
+    file.close();
+
+    if (bytesWritten != output.size()) {
+        QFile::remove(filePath);
+        return failureResult(QStringLiteral("写入 CSV 文件失败"));
+    }
+
+    return QVariantMap {
+        {QStringLiteral("success"), true},
+        {QStringLiteral("errorMessage"), QString()},
+        {QStringLiteral("filePath"), filePath}
+    };
+#endif
 }

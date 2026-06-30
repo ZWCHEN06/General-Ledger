@@ -6,8 +6,21 @@ Item {
     signal backRequested()
 
     property string message: ""
+    property bool messageIsError: false
     readonly property int pageMargin: Math.max(16, Math.min(24, Math.round(width * 0.05)))
     readonly property int bottomInset: Qt.platform.os === "android" ? 72 : pageMargin
+
+    function exportCsv() {
+        const result = appController.exportCsv()
+        if (result.success) {
+            message = "CSV 已导出：" + result.filePath
+            messageIsError = false
+            return
+        }
+
+        message = result.errorMessage
+        messageIsError = true
+    }
 
     Flickable {
         id: settingsFlickable
@@ -55,14 +68,14 @@ Item {
 
                     anchors.fill: parent
                     cursorShape: Qt.PointingHandCursor
-                    onClicked: root.message = "功能开发中"
+                    onClicked: root.exportCsv()
                 }
             }
 
             Text {
                 width: parent.width
                 text: root.message
-                color: "#5f6368"
+                color: root.messageIsError ? "#b3261e" : "#5f6368"
                 font.pixelSize: 16
                 horizontalAlignment: Text.AlignHCenter
                 wrapMode: Text.WordWrap
