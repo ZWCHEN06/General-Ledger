@@ -166,6 +166,10 @@ Item {
                         width: (categoryGrid.width - categoryGrid.columnSpacing) / 2
                         height: 44
                         label: modelData
+                        selected: root.selectedCategory === modelData
+                        onClicked: function(categoryName) {
+                            root.selectedCategory = categoryName
+                        }
                     }
                 }
             }
@@ -357,30 +361,6 @@ Item {
                     }
                 }
             }
-        }
-    }
-
-    component CategoryOption: Rectangle {
-        id: categoryOption
-
-        required property string label
-
-        radius: 8
-        color: root.selectedCategory === categoryOption.label ? "#e6f4ea" : "#ffffff"
-        border.color: root.selectedCategory === categoryOption.label ? "#1e8e3e" : "#dadce0"
-
-        Text {
-            anchors.centerIn: parent
-            text: categoryOption.label
-            color: root.selectedCategory === categoryOption.label ? "#137333" : "#3c4043"
-            font.pixelSize: 15
-            font.bold: root.selectedCategory === categoryOption.label
-        }
-
-        MouseArea {
-            anchors.fill: parent
-            cursorShape: Qt.PointingHandCursor
-            onClicked: root.selectedCategory = categoryOption.label
         }
     }
 
