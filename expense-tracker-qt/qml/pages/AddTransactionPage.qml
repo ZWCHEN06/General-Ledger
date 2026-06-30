@@ -40,6 +40,12 @@ Item {
         errorMessage = result.errorMessage
     }
 
+    Component.onCompleted: {
+        if (dateField.text.length === 0) {
+            dateField.text = Qt.formatDate(new Date(), "yyyy-MM-dd")
+        }
+    }
+
     Flickable {
         id: formFlickable
 
