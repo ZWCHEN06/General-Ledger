@@ -8,8 +8,8 @@ Window {
 
     property int editingTransactionId: 0
 
-    width: 480
-    height: 320
+    width: 360
+    height: 640
     visible: true
     title: "记账 App"
     color: "#f7f7f7"

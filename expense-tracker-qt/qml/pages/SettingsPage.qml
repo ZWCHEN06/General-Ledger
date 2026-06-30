@@ -4,13 +4,25 @@ Item {
     id: root
 
     property string message: ""
+    readonly property int pageMargin: Math.max(16, Math.min(24, Math.round(width * 0.05)))
+    readonly property int bottomInset: Qt.platform.os === "android" ? 72 : pageMargin
 
-    Column {
-        anchors.left: parent.left
-        anchors.right: parent.right
-        anchors.top: parent.top
-        anchors.margins: 24
-        spacing: 20
+    Flickable {
+        id: settingsFlickable
+
+        anchors.fill: parent
+        anchors.margins: root.pageMargin
+        anchors.bottomMargin: root.bottomInset
+        clip: true
+        contentWidth: width
+        contentHeight: settingsColumn.height + root.pageMargin
+        boundsBehavior: Flickable.StopAtBounds
+
+        Column {
+            id: settingsColumn
+
+            width: settingsFlickable.width
+            spacing: 16
 
         Text {
             width: parent.width
@@ -24,7 +36,7 @@ Item {
             id: exportButton
 
             width: parent.width
-            height: 48
+            height: 52
             radius: 8
             color: exportMouseArea.pressed ? "#185abc" : "#1a73e8"
 
@@ -51,7 +63,9 @@ Item {
             color: "#5f6368"
             font.pixelSize: 16
             horizontalAlignment: Text.AlignHCenter
+            wrapMode: Text.WordWrap
             visible: root.message.length > 0
         }
+    }
     }
 }

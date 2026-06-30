@@ -9,6 +9,9 @@ Item {
     property real monthlyExpense: 0.00
     property real monthlyBalance: 0.00
     property string errorMessage: ""
+    readonly property int pageMargin: Math.max(16, Math.min(24, Math.round(width * 0.05)))
+    readonly property int bottomInset: Qt.platform.os === "android" ? 96 : pageMargin
+    readonly property int actionHeight: 52
 
     function refreshSummary() {
         const result = appController.currentMonthSummary()
@@ -28,12 +31,25 @@ Item {
 
     Component.onCompleted: refreshSummary()
 
-    Column {
-        id: contentColumn
+    Flickable {
+        id: contentFlickable
 
-        anchors.fill: parent
-        anchors.margins: 24
-        spacing: 20
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.top: parent.top
+        anchors.bottom: addButton.top
+        anchors.margins: root.pageMargin
+        anchors.bottomMargin: root.pageMargin
+        clip: true
+        contentWidth: width
+        contentHeight: contentColumn.height
+        boundsBehavior: Flickable.StopAtBounds
+
+        Column {
+            id: contentColumn
+
+            width: contentFlickable.width
+            spacing: 16
 
         Text {
             width: parent.width
@@ -45,7 +61,7 @@ Item {
 
         Column {
             width: parent.width
-            spacing: 12
+            spacing: 10
 
             SummaryRow {
                 width: parent.width
@@ -77,6 +93,7 @@ Item {
                 visible: root.errorMessage.length > 0
             }
         }
+        }
     }
 
     Rectangle {
@@ -85,8 +102,9 @@ Item {
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.bottom: parent.bottom
-        anchors.margins: 24
-        height: 48
+        anchors.margins: root.pageMargin
+        anchors.bottomMargin: root.bottomInset
+        height: root.actionHeight
         radius: 8
         color: addButtonMouseArea.pressed ? "#185abc" : "#1a73e8"
 
@@ -114,14 +132,14 @@ Item {
         required property real amount
         required property color amountColor
 
-        height: 72
+        height: 68
         radius: 8
         color: "#ffffff"
         border.color: "#e0e0e0"
 
         Text {
             anchors.left: parent.left
-            anchors.leftMargin: 18
+            anchors.leftMargin: 16
             anchors.right: amountText.left
             anchors.rightMargin: 16
             anchors.verticalCenter: parent.verticalCenter
@@ -135,9 +153,9 @@ Item {
             id: amountText
 
             anchors.right: parent.right
-            anchors.rightMargin: 18
+            anchors.rightMargin: 16
             anchors.verticalCenter: parent.verticalCenter
-            width: Math.min(parent.width * 0.48, 180)
+            width: Math.min(parent.width * 0.52, 180)
             text: "¥" + summaryRow.amount.toFixed(2)
             color: summaryRow.amountColor
             font.pixelSize: 22

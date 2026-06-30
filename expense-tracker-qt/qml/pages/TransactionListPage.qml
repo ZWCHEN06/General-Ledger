@@ -6,6 +6,8 @@ Item {
     id: root
 
     signal editTransactionRequested(int transactionId)
+    readonly property int pageMargin: Math.max(16, Math.min(24, Math.round(width * 0.05)))
+    readonly property int bottomInset: Qt.platform.os === "android" ? 72 : pageMargin
 
     Component.onCompleted: transactionListModel.refresh()
 
@@ -13,14 +15,15 @@ Item {
         id: transactionListView
 
         anchors.fill: parent
-        anchors.margins: 24
-        spacing: 12
+        anchors.margins: root.pageMargin
+        anchors.bottomMargin: root.bottomInset
+        spacing: 10
         clip: true
         model: transactionListModel
 
         header: Text {
             width: transactionListView.width
-            height: 44
+            height: 48
             text: "账单列表"
             color: "#202124"
             font.pixelSize: 28
@@ -45,7 +48,7 @@ Item {
             readonly property bool isIncome: transactionType === "income"
 
             width: transactionListView.width
-            height: transactionNote.length > 0 ? 112 : 88
+            height: transactionNote.length > 0 ? 108 : 84
             radius: 8
             color: "#ffffff"
             border.color: "#e0e0e0"
@@ -69,7 +72,7 @@ Item {
                 id: typeText
 
                 anchors.left: parent.left
-                anchors.leftMargin: 18
+                anchors.leftMargin: 16
                 anchors.top: parent.top
                 anchors.topMargin: 14
                 text: transactionItem.isIncome ? "收入" : "支出"
@@ -97,9 +100,9 @@ Item {
                 id: amountText
 
                 anchors.right: parent.right
-                anchors.rightMargin: 18
+                anchors.rightMargin: 16
                 anchors.verticalCenter: typeText.verticalCenter
-                width: Math.min(parent.width * 0.38, 150)
+                width: Math.min(parent.width * 0.42, 150)
                 text: (transactionItem.isIncome ? "+" : "-") + "¥" + transactionItem.transactionAmount.toFixed(2)
                 color: transactionItem.isIncome ? "#1b7f45" : "#b3261e"
                 font.pixelSize: 18
@@ -112,9 +115,9 @@ Item {
                 id: dateText
 
                 anchors.left: parent.left
-                anchors.leftMargin: 18
+                anchors.leftMargin: 16
                 anchors.right: parent.right
-                anchors.rightMargin: 18
+                anchors.rightMargin: 16
                 anchors.top: typeText.bottom
                 anchors.topMargin: 10
                 text: transactionItem.transactionDate
@@ -125,9 +128,9 @@ Item {
 
             Text {
                 anchors.left: parent.left
-                anchors.leftMargin: 18
+                anchors.leftMargin: 16
                 anchors.right: parent.right
-                anchors.rightMargin: 18
+                anchors.rightMargin: 16
                 anchors.top: dateText.bottom
                 anchors.topMargin: 8
                 text: transactionItem.transactionNote
@@ -140,15 +143,18 @@ Item {
 
         footer: Item {
             width: transactionListView.width
-            height: 12
+            height: root.bottomInset
         }
     }
 
     Text {
         anchors.centerIn: parent
+        width: Math.max(0, parent.width - root.pageMargin * 2)
         text: "暂无账单记录"
         color: "#5f6368"
         font.pixelSize: 18
+        horizontalAlignment: Text.AlignHCenter
+        wrapMode: Text.WordWrap
         visible: transactionListView.count === 0
     }
 }

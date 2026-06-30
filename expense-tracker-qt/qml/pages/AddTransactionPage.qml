@@ -10,6 +10,9 @@ Item {
     property string transactionType: "expense"
     property string selectedCategory: "餐饮"
     property string errorMessage: ""
+    readonly property int pageMargin: Math.max(16, Math.min(24, Math.round(width * 0.05)))
+    readonly property int bottomInset: Qt.platform.os === "android" ? 96 : pageMargin
+    readonly property int actionHeight: 52
 
     readonly property var expenseCategories: ["餐饮", "交通", "购物", "娱乐"]
     readonly property var incomeCategories: ["工资", "奖金", "兼职", "其他"]
@@ -43,17 +46,18 @@ Item {
         anchors.right: parent.right
         anchors.top: parent.top
         anchors.bottom: saveButton.top
-        anchors.margins: 24
-        anchors.bottomMargin: 16
+        anchors.margins: root.pageMargin
+        anchors.bottomMargin: root.pageMargin
         clip: true
         contentWidth: width
-        contentHeight: formColumn.height
+        contentHeight: formColumn.height + root.pageMargin
+        boundsBehavior: Flickable.StopAtBounds
 
         Column {
             id: formColumn
 
             width: formFlickable.width
-            spacing: 18
+            spacing: 14
 
             Text {
                 width: parent.width
@@ -65,8 +69,8 @@ Item {
 
             Row {
                 width: parent.width
-                height: 44
-                spacing: 12
+                height: 48
+                spacing: 10
 
                 TypeOption {
                     width: (parent.width - parent.spacing) / 2
@@ -105,8 +109,8 @@ Item {
 
                 width: parent.width
                 columns: 2
-                columnSpacing: 12
-                rowSpacing: 12
+                columnSpacing: 10
+                rowSpacing: 10
 
                 Repeater {
                     model: root.currentCategories()
@@ -114,7 +118,7 @@ Item {
                         required property string modelData
 
                         width: (categoryGrid.width - categoryGrid.columnSpacing) / 2
-                        height: 42
+                        height: 44
                         label: modelData
                     }
                 }
@@ -153,8 +157,9 @@ Item {
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.bottom: parent.bottom
-        anchors.margins: 24
-        height: 48
+        anchors.margins: root.pageMargin
+        anchors.bottomMargin: root.bottomInset
+        height: root.actionHeight
         radius: 8
         color: saveMouseArea.pressed ? "#185abc" : "#1a73e8"
 
@@ -235,7 +240,7 @@ Item {
         property int inputMethodHints: Qt.ImhNone
         property alias text: fieldInput.text
 
-        height: 76
+        height: 72
 
         Text {
             id: fieldLabel
@@ -251,8 +256,8 @@ Item {
             anchors.left: parent.left
             anchors.right: parent.right
             anchors.top: fieldLabel.bottom
-            anchors.topMargin: 8
-            height: 44
+            anchors.topMargin: 6
+            height: 46
             radius: 8
             color: "#ffffff"
             border.color: fieldInput.activeFocus ? "#1a73e8" : "#dadce0"
