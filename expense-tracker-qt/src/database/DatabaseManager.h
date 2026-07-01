@@ -13,6 +13,7 @@ public:
     void closeDatabase();
     bool isOpen() const;
     bool initializeTables();
+    QString lastErrorMessage() const;
     QSqlDatabase database() const;
 
 private:
@@ -21,16 +22,12 @@ private:
     static constexpr int CurrentSchemaVersion = 1;
 
     bool ensureTransactionsTable();
-    int currentUserVersion() const;
+    int currentUserVersion();
     bool setUserVersion(int version);
     bool migrateDatabase();
     bool migrateToVersion1();
     bool createCategoriesTable();
-    bool addTransactionCategoryIdColumn();
-    bool seedDefaultCategories(const QString &timestamp);
-    bool backfillCategoriesFromTransactions(const QString &timestamp);
-    bool backfillTransactionCategoryIds();
-    bool columnExists(const QString &tableName, const QString &columnName) const;
 
     QSqlDatabase m_database;
+    QString m_lastErrorMessage;
 };

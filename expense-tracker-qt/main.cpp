@@ -26,7 +26,10 @@ int main(int argc, char *argv[])
             : QStringLiteral("数据库打开失败：%1").arg(detail);
         qWarning().noquote() << databaseErrorMessage;
     } else if (!databaseManager.initializeTables()) {
-        const QString detail = databaseManager.database().lastError().text();
+        QString detail = databaseManager.lastErrorMessage();
+        if (detail.trimmed().isEmpty()) {
+            detail = databaseManager.database().lastError().text();
+        }
         databaseErrorMessage = detail.isEmpty()
             ? QStringLiteral("数据库初始化失败，请检查 transactions 表结构和 SQLite 日志")
             : QStringLiteral("数据库初始化失败：%1").arg(detail);
