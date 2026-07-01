@@ -216,6 +216,10 @@ bool DatabaseManager::migrateDatabase()
         return false;
     }
 
+    if (version < 4 && !migrateToVersion4()) {
+        return false;
+    }
+
     return true;
 }
 
@@ -311,6 +315,40 @@ bool DatabaseManager::migrateToVersion3()
 
     if (!m_database.commit()) {
         m_lastErrorMessage = QStringLiteral("Failed to commit SQLite schema migration to version 3: %1")
+                                 .arg(m_database.lastError().text());
+        qWarning().noquote() << "Failed to commit SQLite schema migration:"
+                             << m_database.lastError().text();
+        rollbackMigration();
+        return false;
+    }
+
+    return true;
+}
+
+bool DatabaseManager::migrateToVersion4()
+{
+    if (!m_database.transaction()) {
+        m_lastErrorMessage = QStringLiteral("Failed to start SQLite schema migration to version 4: %1")
+                                 .arg(m_database.lastError().text());
+        qWarning().noquote() << "Failed to start SQLite schema migration transaction:"
+                             << m_database.lastError().text();
+        return false;
+    }
+
+    const auto rollbackMigration = [this]() {
+        if (!m_database.rollback()) {
+            qWarning().noquote() << "Failed to roll back SQLite schema migration:"
+                                 << m_database.lastError().text();
+        }
+    };
+
+    if (!backfillTransactionCategoryIds() || !setUserVersion(4)) {
+        rollbackMigration();
+        return false;
+    }
+
+    if (!m_database.commit()) {
+        m_lastErrorMessage = QStringLiteral("Failed to commit SQLite schema migration to version 4: %1")
                                  .arg(m_database.lastError().text());
         qWarning().noquote() << "Failed to commit SQLite schema migration:"
                              << m_database.lastError().text();
@@ -426,6 +464,37 @@ bool DatabaseManager::seedDefaultCategories()
                                  << category.type << category.name << query.lastError().text();
             return false;
         }
+    }
+
+    return true;
+}
+
+bool DatabaseManager::backfillTransactionCategoryIds()
+{
+    QSqlQuery query(m_database);
+    const bool success = query.exec(QStringLiteral(R"(
+        UPDATE transactions
+        SET category_id = (
+            SELECT categories.id
+            FROM categories
+            WHERE categories.name = transactions.category
+              AND categories.type = transactions.type
+        )
+        WHERE category_id IS NULL
+          AND EXISTS (
+              SELECT 1
+              FROM categories
+              WHERE categories.name = transactions.category
+                AND categories.type = transactions.type
+          )
+    )"));
+
+    if (!success) {
+        m_lastErrorMessage = QStringLiteral("Failed to backfill transactions.category_id during schema migration to version 4: %1")
+                                 .arg(query.lastError().text());
+        qWarning().noquote() << "Failed to backfill transactions.category_id:"
+                             << query.lastError().text();
+        return false;
     }
 
     return true;
