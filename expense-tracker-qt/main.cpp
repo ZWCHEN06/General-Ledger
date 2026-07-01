@@ -104,6 +104,7 @@ int main(int argc, char *argv[])
 #endif
 
     TransactionListModel transactionListModel(&transactionRepository);
+    appController.setTransactionListModel(&transactionListModel);
     engine.rootContext()->setContextProperty(QStringLiteral("appController"), &appController);
     engine.rootContext()->setContextProperty(QStringLiteral("transactionListModel"), &transactionListModel);
 

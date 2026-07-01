@@ -1,6 +1,8 @@
 #include "AppController.h"
 
 #include "models/Transaction.h"
+#include "models/TransactionFilter.h"
+#include "models/TransactionListModel.h"
 #include "repositories/TransactionRepository.h"
 #include "services/CategorySummaryService.h"
 #include "services/CsvExportService.h"
@@ -11,7 +13,10 @@
 #include <QDir>
 #include <QFile>
 #include <QStandardPaths>
+#include <QVariant>
 #include <QVariantList>
+
+#include <optional>
 
 namespace {
 QVariantMap failureResult(const QString &message)
@@ -20,6 +25,14 @@ QVariantMap failureResult(const QString &message)
         {QStringLiteral("success"), false},
         {QStringLiteral("errorMessage"), message},
         {QStringLiteral("id"), -1}
+    };
+}
+
+QVariantMap successResult()
+{
+    return QVariantMap {
+        {QStringLiteral("success"), true},
+        {QStringLiteral("errorMessage"), QString()}
     };
 }
 
@@ -35,6 +48,113 @@ QVariantMap transactionToMap(const Transaction &transaction)
         {QStringLiteral("date"), transaction.date()},
         {QStringLiteral("note"), transaction.note()}
     };
+}
+
+bool isEmptyOptionalValue(const QVariant &value)
+{
+    return !value.isValid() || value.isNull() || value.toString().trimmed().isEmpty();
+}
+
+bool parseOptionalInt(const QVariant &value,
+                      const QString &fieldName,
+                      int minValue,
+                      int maxValue,
+                      std::optional<int> *output,
+                      QString *errorMessage)
+{
+    if (isEmptyOptionalValue(value)) {
+        return true;
+    }
+
+    bool ok = false;
+    const int parsedValue = value.toString().trimmed().toInt(&ok);
+    if (!ok) {
+        if (errorMessage) {
+            *errorMessage = QStringLiteral("%1格式不正确").arg(fieldName);
+        }
+        return false;
+    }
+
+    if (parsedValue < minValue || parsedValue > maxValue) {
+        if (errorMessage) {
+            *errorMessage = QStringLiteral("%1必须在 %2 到 %3 之间").arg(fieldName).arg(minValue).arg(maxValue);
+        }
+        return false;
+    }
+
+    if (output) {
+        *output = parsedValue;
+    }
+    return true;
+}
+
+bool parseOptionalAmount(const QVariant &value,
+                         const QString &fieldName,
+                         std::optional<double> *output,
+                         QString *errorMessage)
+{
+    if (isEmptyOptionalValue(value)) {
+        return true;
+    }
+
+    bool ok = false;
+    const double parsedValue = value.toString().trimmed().toDouble(&ok);
+    if (!ok) {
+        if (errorMessage) {
+            *errorMessage = QStringLiteral("%1格式不正确").arg(fieldName);
+        }
+        return false;
+    }
+
+    if (parsedValue < 0.0) {
+        if (errorMessage) {
+            *errorMessage = QStringLiteral("%1不能小于 0").arg(fieldName);
+        }
+        return false;
+    }
+
+    if (output) {
+        *output = parsedValue;
+    }
+    return true;
+}
+
+bool parseOptionalTransactionType(const QString &type, TransactionFilter *filter, QString *errorMessage)
+{
+    const QString normalizedType = type.trimmed().toLower();
+    if (normalizedType.isEmpty()
+        || normalizedType == QStringLiteral("all")
+        || normalizedType == QStringLiteral("全部")) {
+        return true;
+    }
+
+    if (normalizedType == QStringLiteral("收入")) {
+        if (filter) {
+            filter->type = TransactionType::Income;
+        }
+        return true;
+    }
+
+    if (normalizedType == QStringLiteral("支出")) {
+        if (filter) {
+            filter->type = TransactionType::Expense;
+        }
+        return true;
+    }
+
+    bool typeOk = false;
+    const TransactionType transactionType = Transaction::typeFromString(normalizedType, &typeOk);
+    if (!typeOk) {
+        if (errorMessage) {
+            *errorMessage = QStringLiteral("账单类型不正确，请使用 income 或 expense");
+        }
+        return false;
+    }
+
+    if (filter) {
+        filter->type = transactionType;
+    }
+    return true;
 }
 
 }
@@ -69,6 +189,11 @@ void AppController::setDatabaseStatus(bool ready, const QString &errorMessage)
     m_databaseReady = ready;
     m_databaseErrorMessage = errorMessage;
     emit databaseStatusChanged();
+}
+
+void AppController::setTransactionListModel(TransactionListModel *transactionListModel)
+{
+    m_transactionListModel = transactionListModel;
 }
 
 QString AppController::effectiveDatabaseErrorMessage() const
@@ -372,4 +497,76 @@ QVariantMap AppController::currentMonthCategorySummary() const
         {QStringLiteral("errorMessage"), QString()},
         {QStringLiteral("items"), items}
     };
+}
+
+QVariantMap AppController::applyTransactionFilter(const QVariant &year,
+                                                  const QVariant &month,
+                                                  const QString &type,
+                                                  const QString &category,
+                                                  const QString &keyword,
+                                                  const QVariant &minAmount,
+                                                  const QVariant &maxAmount)
+{
+    if (!m_databaseReady) {
+        return failureResult(effectiveDatabaseErrorMessage());
+    }
+
+    if (!m_transactionListModel) {
+        return failureResult(QStringLiteral("账单列表模型未初始化"));
+    }
+
+    TransactionFilter filter;
+    QString validationError;
+
+    if (!parseOptionalInt(year, QStringLiteral("年份"), 1, 9999, &filter.year, &validationError)) {
+        return failureResult(validationError);
+    }
+
+    if (!parseOptionalInt(month, QStringLiteral("月份"), 1, 12, &filter.month, &validationError)) {
+        return failureResult(validationError);
+    }
+
+    if (!parseOptionalTransactionType(type, &filter, &validationError)) {
+        return failureResult(validationError);
+    }
+
+    const QString trimmedCategory = category.trimmed();
+    if (!trimmedCategory.isEmpty()) {
+        filter.category = trimmedCategory;
+    }
+
+    const QString trimmedKeyword = keyword.trimmed();
+    if (!trimmedKeyword.isEmpty()) {
+        filter.keyword = trimmedKeyword;
+    }
+
+    if (!parseOptionalAmount(minAmount, QStringLiteral("最小金额"), &filter.minAmount, &validationError)) {
+        return failureResult(validationError);
+    }
+
+    if (!parseOptionalAmount(maxAmount, QStringLiteral("最大金额"), &filter.maxAmount, &validationError)) {
+        return failureResult(validationError);
+    }
+
+    if (filter.minAmount.has_value() && filter.maxAmount.has_value()
+        && filter.minAmount.value() > filter.maxAmount.value()) {
+        return failureResult(QStringLiteral("最小金额不能大于最大金额"));
+    }
+
+    m_transactionListModel->refreshWithFilter(filter);
+    return successResult();
+}
+
+QVariantMap AppController::clearTransactionFilter()
+{
+    if (!m_databaseReady) {
+        return failureResult(effectiveDatabaseErrorMessage());
+    }
+
+    if (!m_transactionListModel) {
+        return failureResult(QStringLiteral("账单列表模型未初始化"));
+    }
+
+    m_transactionListModel->refresh();
+    return successResult();
 }

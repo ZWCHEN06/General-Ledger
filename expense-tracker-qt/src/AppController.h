@@ -2,8 +2,10 @@
 
 #include <QObject>
 #include <QString>
+#include <QVariant>
 #include <QVariantMap>
 
+class TransactionListModel;
 class TransactionRepository;
 
 class AppController : public QObject
@@ -37,6 +39,16 @@ public:
     Q_INVOKABLE QVariantMap deleteTransaction(int id);
     Q_INVOKABLE QVariantMap exportCsv() const;
     Q_INVOKABLE QVariantMap currentMonthCategorySummary() const;
+    Q_INVOKABLE QVariantMap applyTransactionFilter(const QVariant &year,
+                                                   const QVariant &month,
+                                                   const QString &type,
+                                                   const QString &category,
+                                                   const QString &keyword,
+                                                   const QVariant &minAmount,
+                                                   const QVariant &maxAmount);
+    Q_INVOKABLE QVariantMap clearTransactionFilter();
+
+    void setTransactionListModel(TransactionListModel *transactionListModel);
 
 signals:
     void databaseStatusChanged();
@@ -45,6 +57,7 @@ private:
     QString effectiveDatabaseErrorMessage() const;
 
     TransactionRepository *m_transactionRepository = nullptr;
+    TransactionListModel *m_transactionListModel = nullptr;
     bool m_databaseReady = true;
     QString m_databaseErrorMessage;
 };
