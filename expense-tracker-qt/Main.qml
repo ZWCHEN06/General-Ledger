@@ -27,6 +27,7 @@ Window {
         HomePage {
             onAddTransactionRequested: pageLoader.sourceComponent = addTransactionPageComponent
             onTransactionListRequested: pageLoader.sourceComponent = transactionListPageComponent
+            onCategorySummaryRequested: pageLoader.sourceComponent = categorySummaryPageComponent
             onSettingsRequested: pageLoader.sourceComponent = settingsPageComponent
         }
     }
@@ -55,6 +56,14 @@ Window {
         id: settingsPageComponent
 
         SettingsPage {
+            onBackRequested: pageLoader.sourceComponent = homePageComponent
+        }
+    }
+
+    Component {
+        id: categorySummaryPageComponent
+
+        CategorySummaryPage {
             onBackRequested: pageLoader.sourceComponent = homePageComponent
         }
     }

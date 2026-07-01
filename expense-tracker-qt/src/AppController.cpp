@@ -2,6 +2,7 @@
 
 #include "models/Transaction.h"
 #include "repositories/TransactionRepository.h"
+#include "services/CategorySummaryService.h"
 #include "services/CsvExportService.h"
 #include "services/SummaryService.h"
 
@@ -10,6 +11,7 @@
 #include <QDir>
 #include <QFile>
 #include <QStandardPaths>
+#include <QVariantList>
 
 namespace {
 QVariantMap failureResult(const QString &message)
@@ -329,4 +331,45 @@ QVariantMap AppController::exportCsv() const
         {QStringLiteral("filePath"), filePath}
     };
 #endif
+}
+
+QVariantMap AppController::currentMonthCategorySummary() const
+{
+    if (!m_databaseReady) {
+        return QVariantMap {
+            {QStringLiteral("success"), false},
+            {QStringLiteral("errorMessage"), effectiveDatabaseErrorMessage()},
+            {QStringLiteral("items"), QVariantList()}
+        };
+    }
+
+    if (!m_transactionRepository) {
+        return QVariantMap {
+            {QStringLiteral("success"), false},
+            {QStringLiteral("errorMessage"), QStringLiteral("账单仓库未初始化")},
+            {QStringLiteral("items"), QVariantList()}
+        };
+    }
+
+    const QDate currentDate = QDate::currentDate();
+    const QList<Transaction> transactions =
+        m_transactionRepository->getTransactionsByMonth(currentDate.year(), currentDate.month());
+
+    const CategorySummaryService categorySummaryService;
+    const QList<CategorySummaryItem> summaryItems = categorySummaryService.calculate(transactions);
+
+    QVariantList items;
+    items.reserve(summaryItems.size());
+    for (const CategorySummaryItem &summaryItem : summaryItems) {
+        items.append(QVariantMap {
+            {QStringLiteral("category"), summaryItem.category},
+            {QStringLiteral("amount"), summaryItem.amount}
+        });
+    }
+
+    return QVariantMap {
+        {QStringLiteral("success"), true},
+        {QStringLiteral("errorMessage"), QString()},
+        {QStringLiteral("items"), items}
+    };
 }

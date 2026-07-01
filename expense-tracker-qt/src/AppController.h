@@ -36,6 +36,7 @@ public:
                                               const QString &note);
     Q_INVOKABLE QVariantMap deleteTransaction(int id);
     Q_INVOKABLE QVariantMap exportCsv() const;
+    Q_INVOKABLE QVariantMap currentMonthCategorySummary() const;
 
 signals:
     void databaseStatusChanged();

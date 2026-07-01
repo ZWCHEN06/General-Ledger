@@ -5,6 +5,7 @@ Item {
 
     signal addTransactionRequested()
     signal transactionListRequested()
+    signal categorySummaryRequested()
     signal settingsRequested()
 
     property real monthlyIncome: 0.00
@@ -125,6 +126,13 @@ Item {
                 text: "设置"
                 onClicked: root.settingsRequested()
             }
+        }
+
+        NavigationButton {
+            width: parent.width
+            height: 46
+            text: "分类统计"
+            onClicked: root.categorySummaryRequested()
         }
         }
     }
