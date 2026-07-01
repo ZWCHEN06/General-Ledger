@@ -65,7 +65,7 @@ Item {
                     monthFilter.year,
                     monthFilter.month,
                     selectedFilterType,
-                    "",
+                    categoryFilterInput.text.trim(),
                     "",
                     "",
                     "")
