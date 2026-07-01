@@ -67,16 +67,12 @@ Item {
                     monthFilter.month,
                     selectedFilterType,
                     categoryFilterInput.text.trim(),
-                    "",
+                    keywordFilterInput.text.trim(),
                     minAmountFilterInput.text.trim(),
                     maxAmountFilterInput.text.trim())
         filterErrorMessage = result.success ? "" : result.errorMessage
         if (result.success) {
-            filterActive = monthFilter.year.length > 0
-                    || selectedFilterType !== "all"
-                    || categoryFilterInput.text.trim().length > 0
-                    || minAmountFilterInput.text.trim().length > 0
-                    || maxAmountFilterInput.text.trim().length > 0
+            filterActive = result.filterActive
         }
     }
 
@@ -95,9 +91,34 @@ Item {
         }
     }
 
+    function restoreCurrentFilter() {
+        var state = appController.currentTransactionFilter()
+        if (!state.success) {
+            filterErrorMessage = state.errorMessage
+            return
+        }
+
+        if (state.year.length > 0 && state.month.length > 0) {
+            var monthNumber = parseInt(state.month, 10)
+            monthFilterInput.text = state.year + "-" + (monthNumber < 10 ? "0" + monthNumber : String(monthNumber))
+        } else {
+            monthFilterInput.text = ""
+        }
+
+        selectedFilterType = state.type
+        categoryFilterInput.text = state.category
+        keywordFilterInput.text = state.keyword
+        minAmountFilterInput.text = state.minAmount
+        maxAmountFilterInput.text = state.maxAmount
+        filterActive = state.filterActive
+        filterErrorMessage = ""
+    }
+
     Component.onCompleted: {
         if (appController.databaseReady) {
-            transactionListModel.refresh()
+            restoreCurrentFilter()
+            var result = appController.refreshTransactionList()
+            filterErrorMessage = result.success ? "" : result.errorMessage
         }
     }
 

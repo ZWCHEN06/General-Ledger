@@ -28,11 +28,12 @@ QVariantMap failureResult(const QString &message)
     };
 }
 
-QVariantMap successResult()
+QVariantMap successResult(bool filterActive = false)
 {
     return QVariantMap {
         {QStringLiteral("success"), true},
-        {QStringLiteral("errorMessage"), QString()}
+        {QStringLiteral("errorMessage"), QString()},
+        {QStringLiteral("filterActive"), filterActive}
     };
 }
 
@@ -157,6 +158,26 @@ bool parseOptionalTransactionType(const QString &type, TransactionFilter *filter
     return true;
 }
 
+bool hasActiveFilter(const TransactionFilter &filter)
+{
+    return filter.year.has_value()
+        || filter.month.has_value()
+        || filter.type.has_value()
+        || !filter.category.value_or(QString()).trimmed().isEmpty()
+        || !filter.keyword.value_or(QString()).trimmed().isEmpty()
+        || filter.minAmount.has_value()
+        || filter.maxAmount.has_value();
+}
+
+QString optionalDoubleToString(const std::optional<double> &value)
+{
+    if (!value.has_value()) {
+        return QString();
+    }
+
+    return QString::number(value.value(), 'g', 15);
+}
+
 }
 
 AppController::AppController(QObject *parent)
@@ -178,6 +199,11 @@ bool AppController::databaseReady() const
 QString AppController::databaseErrorMessage() const
 {
     return effectiveDatabaseErrorMessage();
+}
+
+bool AppController::transactionFilterActive() const
+{
+    return m_transactionFilterActive;
 }
 
 void AppController::setDatabaseStatus(bool ready, const QString &errorMessage)
@@ -553,8 +579,17 @@ QVariantMap AppController::applyTransactionFilter(const QVariant &year,
         return failureResult(QStringLiteral("最小金额不能大于最大金额"));
     }
 
-    m_transactionListModel->refreshWithFilter(filter);
-    return successResult();
+    m_transactionFilter = filter;
+    m_transactionFilterActive = hasActiveFilter(m_transactionFilter);
+
+    if (m_transactionFilterActive) {
+        m_transactionListModel->refreshWithFilter(m_transactionFilter);
+    } else {
+        m_transactionListModel->refresh();
+    }
+
+    emit transactionFilterChanged();
+    return successResult(m_transactionFilterActive);
 }
 
 QVariantMap AppController::clearTransactionFilter()
@@ -567,6 +602,51 @@ QVariantMap AppController::clearTransactionFilter()
         return failureResult(QStringLiteral("账单列表模型未初始化"));
     }
 
+    m_transactionFilter = TransactionFilter();
+    m_transactionFilterActive = false;
+
     m_transactionListModel->refresh();
-    return successResult();
+    emit transactionFilterChanged();
+    return successResult(false);
+}
+
+QVariantMap AppController::currentTransactionFilter() const
+{
+    return QVariantMap {
+        {QStringLiteral("success"), true},
+        {QStringLiteral("errorMessage"), QString()},
+        {QStringLiteral("filterActive"), m_transactionFilterActive},
+        {QStringLiteral("year"), m_transactionFilter.year.has_value()
+             ? QString::number(m_transactionFilter.year.value())
+             : QString()},
+        {QStringLiteral("month"), m_transactionFilter.month.has_value()
+             ? QString::number(m_transactionFilter.month.value())
+             : QString()},
+        {QStringLiteral("type"), m_transactionFilter.type.has_value()
+             ? Transaction::typeToString(m_transactionFilter.type.value())
+             : QStringLiteral("all")},
+        {QStringLiteral("category"), m_transactionFilter.category.value_or(QString())},
+        {QStringLiteral("keyword"), m_transactionFilter.keyword.value_or(QString())},
+        {QStringLiteral("minAmount"), optionalDoubleToString(m_transactionFilter.minAmount)},
+        {QStringLiteral("maxAmount"), optionalDoubleToString(m_transactionFilter.maxAmount)}
+    };
+}
+
+QVariantMap AppController::refreshTransactionList()
+{
+    if (!m_databaseReady) {
+        return failureResult(effectiveDatabaseErrorMessage());
+    }
+
+    if (!m_transactionListModel) {
+        return failureResult(QStringLiteral("账单列表模型未初始化"));
+    }
+
+    if (m_transactionFilterActive) {
+        m_transactionListModel->refreshWithFilter(m_transactionFilter);
+    } else {
+        m_transactionListModel->refresh();
+    }
+
+    return successResult(m_transactionFilterActive);
 }

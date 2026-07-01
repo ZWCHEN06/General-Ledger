@@ -74,11 +74,11 @@ Window {
         EditTransactionPage {
             transactionId: root.editingTransactionId
             onTransactionUpdated: {
-                transactionListModel.refresh()
+                appController.refreshTransactionList()
                 pageLoader.sourceComponent = transactionListPageComponent
             }
             onTransactionDeleted: {
-                transactionListModel.refresh()
+                appController.refreshTransactionList()
                 pageLoader.sourceComponent = transactionListPageComponent
             }
         }

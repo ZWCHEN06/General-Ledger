@@ -1,5 +1,7 @@
 #pragma once
 
+#include "models/TransactionFilter.h"
+
 #include <QObject>
 #include <QString>
 #include <QVariant>
@@ -13,6 +15,7 @@ class AppController : public QObject
     Q_OBJECT
     Q_PROPERTY(bool databaseReady READ databaseReady NOTIFY databaseStatusChanged)
     Q_PROPERTY(QString databaseErrorMessage READ databaseErrorMessage NOTIFY databaseStatusChanged)
+    Q_PROPERTY(bool transactionFilterActive READ transactionFilterActive NOTIFY transactionFilterChanged)
 
 public:
     explicit AppController(QObject *parent = nullptr);
@@ -20,6 +23,7 @@ public:
 
     bool databaseReady() const;
     QString databaseErrorMessage() const;
+    bool transactionFilterActive() const;
     void setDatabaseStatus(bool ready, const QString &errorMessage);
 
     Q_INVOKABLE QString testMessage() const;
@@ -47,17 +51,22 @@ public:
                                                    const QVariant &minAmount,
                                                    const QVariant &maxAmount);
     Q_INVOKABLE QVariantMap clearTransactionFilter();
+    Q_INVOKABLE QVariantMap currentTransactionFilter() const;
+    Q_INVOKABLE QVariantMap refreshTransactionList();
 
     void setTransactionListModel(TransactionListModel *transactionListModel);
 
 signals:
     void databaseStatusChanged();
+    void transactionFilterChanged();
 
 private:
     QString effectiveDatabaseErrorMessage() const;
 
     TransactionRepository *m_transactionRepository = nullptr;
     TransactionListModel *m_transactionListModel = nullptr;
+    TransactionFilter m_transactionFilter;
+    bool m_transactionFilterActive = false;
     bool m_databaseReady = true;
     QString m_databaseErrorMessage;
 };
