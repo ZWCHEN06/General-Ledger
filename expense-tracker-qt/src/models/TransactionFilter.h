@@ -8,6 +8,9 @@
 
 struct TransactionFilter
 {
+    bool validate(QString *errorMessage = nullptr) const;
+    bool hasActiveConditions() const;
+
     std::optional<int> year;
     std::optional<int> month;
     std::optional<TransactionType> type;

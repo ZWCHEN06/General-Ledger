@@ -158,17 +158,6 @@ bool parseOptionalTransactionType(const QString &type, TransactionFilter *filter
     return true;
 }
 
-bool hasActiveFilter(const TransactionFilter &filter)
-{
-    return filter.year.has_value()
-        || filter.month.has_value()
-        || filter.type.has_value()
-        || !filter.category.value_or(QString()).trimmed().isEmpty()
-        || !filter.keyword.value_or(QString()).trimmed().isEmpty()
-        || filter.minAmount.has_value()
-        || filter.maxAmount.has_value();
-}
-
 QString optionalDoubleToString(const std::optional<double> &value)
 {
     if (!value.has_value()) {
@@ -574,13 +563,12 @@ QVariantMap AppController::applyTransactionFilter(const QVariant &year,
         return failureResult(validationError);
     }
 
-    if (filter.minAmount.has_value() && filter.maxAmount.has_value()
-        && filter.minAmount.value() > filter.maxAmount.value()) {
-        return failureResult(QStringLiteral("最小金额不能大于最大金额"));
+    if (!filter.validate(&validationError)) {
+        return failureResult(validationError);
     }
 
     m_transactionFilter = filter;
-    m_transactionFilterActive = hasActiveFilter(m_transactionFilter);
+    m_transactionFilterActive = m_transactionFilter.hasActiveConditions();
 
     if (m_transactionFilterActive) {
         m_transactionListModel->refreshWithFilter(m_transactionFilter);

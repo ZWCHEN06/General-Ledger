@@ -18,6 +18,8 @@ qt_add_executable(expense-tracker-qt
     src/database/DatabaseManager.h
     src/models/Transaction.cpp
     src/models/Transaction.h
+    src/models/TransactionFilter.cpp
+    src/models/TransactionFilter.h
     src/models/TransactionListModel.cpp
     src/models/TransactionListModel.h
     src/repositories/TransactionRepository.cpp

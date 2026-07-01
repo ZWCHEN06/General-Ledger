@@ -65,6 +65,28 @@ QDate parseStoredTransactionDate(const QString &date)
 
     return QDate();
 }
+
+bool transactionMatchesDateFilter(const Transaction &transaction, const TransactionFilter &filter)
+{
+    if (!filter.year.has_value() && !filter.month.has_value()) {
+        return true;
+    }
+
+    const QDate transactionDate = parseStoredTransactionDate(transaction.date());
+    if (!transactionDate.isValid()) {
+        return false;
+    }
+
+    if (filter.year.has_value() && transactionDate.year() != filter.year.value()) {
+        return false;
+    }
+
+    if (filter.month.has_value() && transactionDate.month() != filter.month.value()) {
+        return false;
+    }
+
+    return true;
+}
 }
 
 TransactionRepository::TransactionRepository(const QSqlDatabase &database)
@@ -183,47 +205,13 @@ QList<Transaction> TransactionRepository::getTransactionsByFilter(const Transact
         return transactions;
     }
 
-    if (filter.year.has_value() && filter.year.value() <= 0) {
-        qWarning().noquote() << "筛选查询交易失败：年份非法，year:" << filter.year.value();
-        return transactions;
-    }
-
-    if (filter.month.has_value() && (filter.month.value() < 1 || filter.month.value() > 12)) {
-        qWarning().noquote() << "筛选查询交易失败：月份非法，month:" << filter.month.value();
-        return transactions;
-    }
-
-    if (filter.minAmount.has_value() && filter.maxAmount.has_value()
-        && filter.minAmount.value() > filter.maxAmount.value()) {
-        qWarning().noquote() << "筛选查询交易失败：最小金额不能大于最大金额";
+    QString validationError;
+    if (!filter.validate(&validationError)) {
+        qWarning().noquote() << "筛选查询交易失败：" << validationError;
         return transactions;
     }
 
     QStringList whereConditions;
-    QDate startDate;
-    QDate endDate;
-    QString monthValue;
-
-    if (filter.year.has_value() && filter.month.has_value()) {
-        startDate = QDate(filter.year.value(), filter.month.value(), 1);
-        if (!startDate.isValid()) {
-            qWarning().noquote() << "筛选查询交易失败：年份或月份非法，year:" << filter.year.value()
-                                 << "month:" << filter.month.value();
-            return transactions;
-        }
-
-        endDate = startDate.addMonths(1);
-        whereConditions.append(QStringLiteral("date >= :startDate"));
-        whereConditions.append(QStringLiteral("date < :endDate"));
-    } else if (filter.year.has_value()) {
-        startDate = QDate(filter.year.value(), 1, 1);
-        endDate = startDate.addYears(1);
-        whereConditions.append(QStringLiteral("date >= :startDate"));
-        whereConditions.append(QStringLiteral("date < :endDate"));
-    } else if (filter.month.has_value()) {
-        monthValue = QStringLiteral("%1").arg(filter.month.value(), 2, 10, QChar(QLatin1Char('0')));
-        whereConditions.append(QStringLiteral("strftime('%m', date) = :month"));
-    }
 
     if (filter.type.has_value()) {
         whereConditions.append(QStringLiteral("type = :type"));
@@ -276,15 +264,6 @@ QList<Transaction> TransactionRepository::getTransactionsByFilter(const Transact
         return transactions;
     }
 
-    if (startDate.isValid() && endDate.isValid()) {
-        query.bindValue(QStringLiteral(":startDate"), startDate.toString(QStringLiteral("yyyy-MM-dd")));
-        query.bindValue(QStringLiteral(":endDate"), endDate.toString(QStringLiteral("yyyy-MM-dd")));
-    }
-
-    if (!monthValue.isEmpty()) {
-        query.bindValue(QStringLiteral(":month"), monthValue);
-    }
-
     if (filter.type.has_value()) {
         query.bindValue(QStringLiteral(":type"), Transaction::typeToString(filter.type.value()));
     }
@@ -312,7 +291,7 @@ QList<Transaction> TransactionRepository::getTransactionsByFilter(const Transact
 
     while (query.next()) {
         const std::optional<Transaction> transaction = transactionFromCurrentRow(query);
-        if (transaction.has_value()) {
+        if (transaction.has_value() && transactionMatchesDateFilter(transaction.value(), filter)) {
             transactions.append(transaction.value());
         }
     }
