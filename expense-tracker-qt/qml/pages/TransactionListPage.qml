@@ -8,6 +8,7 @@ Item {
     signal editTransactionRequested(int transactionId)
     signal backRequested()
     property bool filterExpanded: false
+    property bool filterActive: false
     property string selectedFilterType: "all"
     property string filterErrorMessage: ""
     readonly property int pageMargin: Math.max(16, Math.min(24, Math.round(width * 0.05)))
@@ -70,6 +71,13 @@ Item {
                     minAmountFilterInput.text.trim(),
                     maxAmountFilterInput.text.trim())
         filterErrorMessage = result.success ? "" : result.errorMessage
+        if (result.success) {
+            filterActive = monthFilter.year.length > 0
+                    || selectedFilterType !== "all"
+                    || categoryFilterInput.text.trim().length > 0
+                    || minAmountFilterInput.text.trim().length > 0
+                    || maxAmountFilterInput.text.trim().length > 0
+        }
     }
 
     function clearCurrentFilter() {
@@ -82,6 +90,9 @@ Item {
 
         var result = appController.clearTransactionFilter()
         filterErrorMessage = result.success ? "" : result.errorMessage
+        if (result.success) {
+            filterActive = false
+        }
     }
 
     Component.onCompleted: {
@@ -111,17 +122,32 @@ Item {
                 id: titleRow
 
                 width: parent.width
-                height: 48
+                height: 72
+
+                Text {
+                    id: pageTitleText
+
+                    anchors.left: parent.left
+                    anchors.right: filterToggleButton.left
+                    anchors.rightMargin: 12
+                    anchors.top: parent.top
+                    anchors.topMargin: 2
+                    text: "账单列表"
+                    color: "#202124"
+                    font.pixelSize: 28
+                    font.bold: true
+                    elide: Text.ElideRight
+                }
 
                 Text {
                     anchors.left: parent.left
                     anchors.right: filterToggleButton.left
                     anchors.rightMargin: 12
-                    anchors.verticalCenter: parent.verticalCenter
-                    text: "账单列表"
-                    color: "#202124"
-                    font.pixelSize: 28
-                    font.bold: true
+                    anchors.top: pageTitleText.bottom
+                    anchors.topMargin: 4
+                    text: root.filterActive ? "筛选中，结果 " + transactionListView.count + " 条" : "未筛选"
+                    color: root.filterActive ? "#1a73e8" : "#5f6368"
+                    font.pixelSize: 14
                     elide: Text.ElideRight
                 }
 
@@ -652,7 +678,7 @@ Item {
     Text {
         anchors.centerIn: parent
         width: Math.max(0, parent.width - root.pageMargin * 2)
-        text: "暂无账单记录"
+        text: root.filterActive ? "没有符合条件的账单" : "暂无账单记录"
         color: "#5f6368"
         font.pixelSize: 18
         horizontalAlignment: Text.AlignHCenter
