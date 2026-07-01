@@ -67,8 +67,8 @@ Item {
                     selectedFilterType,
                     categoryFilterInput.text.trim(),
                     "",
-                    "",
-                    "")
+                    minAmountFilterInput.text.trim(),
+                    maxAmountFilterInput.text.trim())
         filterErrorMessage = result.success ? "" : result.errorMessage
     }
 
