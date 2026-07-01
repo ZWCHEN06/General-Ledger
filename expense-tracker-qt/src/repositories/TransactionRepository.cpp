@@ -87,6 +87,14 @@ bool transactionMatchesDateFilter(const Transaction &transaction, const Transact
 
     return true;
 }
+
+QString escapeSqlLikePattern(QString keyword)
+{
+    keyword.replace(QStringLiteral("!"), QStringLiteral("!!"));
+    keyword.replace(QStringLiteral("%"), QStringLiteral("!%"));
+    keyword.replace(QStringLiteral("_"), QStringLiteral("!_"));
+    return keyword;
+}
 }
 
 TransactionRepository::TransactionRepository(const QSqlDatabase &database)
@@ -224,7 +232,7 @@ QList<Transaction> TransactionRepository::getTransactionsByFilter(const Transact
 
     const QString keyword = filter.keyword.value_or(QString()).trimmed();
     if (!keyword.isEmpty()) {
-        whereConditions.append(QStringLiteral("note LIKE :keyword"));
+        whereConditions.append(QStringLiteral("note LIKE :keyword ESCAPE '!'"));
     }
 
     if (filter.minAmount.has_value()) {
@@ -273,7 +281,8 @@ QList<Transaction> TransactionRepository::getTransactionsByFilter(const Transact
     }
 
     if (!keyword.isEmpty()) {
-        query.bindValue(QStringLiteral(":keyword"), QStringLiteral("%") + keyword + QStringLiteral("%"));
+        query.bindValue(QStringLiteral(":keyword"),
+                        QStringLiteral("%") + escapeSqlLikePattern(keyword) + QStringLiteral("%"));
     }
 
     if (filter.minAmount.has_value()) {
