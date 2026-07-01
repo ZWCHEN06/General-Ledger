@@ -9,8 +9,80 @@ Item {
     signal backRequested()
     property bool filterExpanded: false
     property string selectedFilterType: "all"
+    property string filterErrorMessage: ""
     readonly property int pageMargin: Math.max(16, Math.min(24, Math.round(width * 0.05)))
     readonly property int bottomInset: Qt.platform.os === "android" ? 72 : pageMargin
+
+    function parseMonthFilter() {
+        var monthText = monthFilterInput.text.trim()
+        if (monthText.length === 0) {
+            return {
+                "success": true,
+                "year": "",
+                "month": ""
+            }
+        }
+
+        var match = /^(\d{4})-(\d{1,2})$/.exec(monthText)
+        if (match === null) {
+            return {
+                "success": false,
+                "errorMessage": "月份格式不正确，请使用 YYYY-MM"
+            }
+        }
+
+        var year = parseInt(match[1], 10)
+        var month = parseInt(match[2], 10)
+        if (year < 1 || year > 9999) {
+            return {
+                "success": false,
+                "errorMessage": "年份必须是合理数字"
+            }
+        }
+
+        if (month < 1 || month > 12) {
+            return {
+                "success": false,
+                "errorMessage": "月份必须在 1 到 12 之间"
+            }
+        }
+
+        return {
+            "success": true,
+            "year": String(year),
+            "month": String(month)
+        }
+    }
+
+    function applyCurrentFilter() {
+        var monthFilter = parseMonthFilter()
+        if (!monthFilter.success) {
+            filterErrorMessage = monthFilter.errorMessage
+            return
+        }
+
+        var result = appController.applyTransactionFilter(
+                    monthFilter.year,
+                    monthFilter.month,
+                    selectedFilterType,
+                    "",
+                    "",
+                    "",
+                    "")
+        filterErrorMessage = result.success ? "" : result.errorMessage
+    }
+
+    function clearCurrentFilter() {
+        monthFilterInput.text = ""
+        selectedFilterType = "all"
+        categoryFilterInput.text = ""
+        keywordFilterInput.text = ""
+        minAmountFilterInput.text = ""
+        maxAmountFilterInput.text = ""
+
+        var result = appController.clearTransactionFilter()
+        filterErrorMessage = result.success ? "" : result.errorMessage
+    }
 
     Component.onCompleted: {
         if (appController.databaseReady) {
@@ -88,7 +160,7 @@ Item {
 
                 anchors.top: titleRow.bottom
                 width: parent.width
-                height: 512
+                height: 558
                 visible: root.filterExpanded
                 radius: 8
                 color: "#ffffff"
@@ -388,7 +460,7 @@ Item {
 
                                 anchors.fill: parent
                                 cursorShape: Qt.PointingHandCursor
-                                onClicked: appController.applyTransactionFilter("", "", root.selectedFilterType, "", "", "", "")
+                                onClicked: root.applyCurrentFilter()
                             }
                         }
 
@@ -412,17 +484,19 @@ Item {
 
                                 anchors.fill: parent
                                 cursorShape: Qt.PointingHandCursor
-                                onClicked: {
-                                    monthFilterInput.text = ""
-                                    root.selectedFilterType = "all"
-                                    categoryFilterInput.text = ""
-                                    keywordFilterInput.text = ""
-                                    minAmountFilterInput.text = ""
-                                    maxAmountFilterInput.text = ""
-                                    appController.clearTransactionFilter()
-                                }
+                                onClicked: root.clearCurrentFilter()
                             }
                         }
+                    }
+
+                    Text {
+                        width: parent.width
+                        height: root.filterErrorMessage.length > 0 ? implicitHeight : 0
+                        text: root.filterErrorMessage
+                        color: "#b3261e"
+                        font.pixelSize: 14
+                        wrapMode: Text.WordWrap
+                        visible: root.filterErrorMessage.length > 0
                     }
                 }
             }
