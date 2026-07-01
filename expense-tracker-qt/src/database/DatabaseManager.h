@@ -19,14 +19,17 @@ public:
 private:
     static constexpr const char *ConnectionName = "expense_tracker_connection";
     static constexpr const char *DatabaseFileName = "expense_tracker.db";
-    static constexpr int CurrentSchemaVersion = 1;
+    static constexpr int CurrentSchemaVersion = 2;
 
     bool ensureTransactionsTable();
     int currentUserVersion();
     bool setUserVersion(int version);
     bool migrateDatabase();
     bool migrateToVersion1();
+    bool migrateToVersion2();
     bool createCategoriesTable();
+    bool addTransactionCategoryIdColumn();
+    bool columnExists(const QString &tableName, const QString &columnName, bool *exists);
 
     QSqlDatabase m_database;
     QString m_lastErrorMessage;

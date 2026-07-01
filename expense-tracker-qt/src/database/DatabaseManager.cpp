@@ -207,6 +207,10 @@ bool DatabaseManager::migrateDatabase()
         return false;
     }
 
+    if (version < 2 && !migrateToVersion2()) {
+        return false;
+    }
+
     return true;
 }
 
@@ -234,6 +238,40 @@ bool DatabaseManager::migrateToVersion1()
 
     if (!m_database.commit()) {
         m_lastErrorMessage = QStringLiteral("Failed to commit SQLite schema migration to version 1: %1")
+                                 .arg(m_database.lastError().text());
+        qWarning().noquote() << "Failed to commit SQLite schema migration:"
+                             << m_database.lastError().text();
+        rollbackMigration();
+        return false;
+    }
+
+    return true;
+}
+
+bool DatabaseManager::migrateToVersion2()
+{
+    if (!m_database.transaction()) {
+        m_lastErrorMessage = QStringLiteral("Failed to start SQLite schema migration to version 2: %1")
+                                 .arg(m_database.lastError().text());
+        qWarning().noquote() << "Failed to start SQLite schema migration transaction:"
+                             << m_database.lastError().text();
+        return false;
+    }
+
+    const auto rollbackMigration = [this]() {
+        if (!m_database.rollback()) {
+            qWarning().noquote() << "Failed to roll back SQLite schema migration:"
+                                 << m_database.lastError().text();
+        }
+    };
+
+    if (!addTransactionCategoryIdColumn() || !setUserVersion(2)) {
+        rollbackMigration();
+        return false;
+    }
+
+    if (!m_database.commit()) {
+        m_lastErrorMessage = QStringLiteral("Failed to commit SQLite schema migration to version 2: %1")
                                  .arg(m_database.lastError().text());
         qWarning().noquote() << "Failed to commit SQLite schema migration:"
                              << m_database.lastError().text();
@@ -277,6 +315,61 @@ bool DatabaseManager::createCategoriesTable()
                                  .arg(query.lastError().text());
         qWarning().noquote() << "Failed to create categories index:" << query.lastError().text();
         return false;
+    }
+
+    return true;
+}
+
+bool DatabaseManager::addTransactionCategoryIdColumn()
+{
+    bool exists = false;
+    if (!columnExists(QStringLiteral("transactions"), QStringLiteral("category_id"), &exists)) {
+        return false;
+    }
+
+    if (exists) {
+        return true;
+    }
+
+    QSqlQuery query(m_database);
+    const bool success = query.exec(QStringLiteral(R"(
+        ALTER TABLE transactions ADD COLUMN category_id INTEGER
+    )"));
+
+    if (!success) {
+        m_lastErrorMessage = QStringLiteral("Failed to add transactions.category_id during schema migration to version 2: %1")
+                                 .arg(query.lastError().text());
+        qWarning().noquote() << "Failed to add transactions.category_id:"
+                             << query.lastError().text();
+        return false;
+    }
+
+    return true;
+}
+
+bool DatabaseManager::columnExists(const QString &tableName, const QString &columnName, bool *exists)
+{
+    if (exists) {
+        *exists = false;
+    }
+
+    QSqlQuery query(m_database);
+    if (!query.exec(QStringLiteral("PRAGMA table_info(%1)").arg(tableName))) {
+        m_lastErrorMessage = QStringLiteral("Failed to inspect SQLite table columns for %1: %2")
+                                 .arg(tableName)
+                                 .arg(query.lastError().text());
+        qWarning().noquote() << "Failed to inspect SQLite table columns:"
+                             << tableName << query.lastError().text();
+        return false;
+    }
+
+    while (query.next()) {
+        if (query.value(1).toString() == columnName) {
+            if (exists) {
+                *exists = true;
+            }
+            return true;
+        }
     }
 
     return true;
