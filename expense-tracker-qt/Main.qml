@@ -36,6 +36,7 @@ Window {
         id: addTransactionPageComponent
 
         AddTransactionPage {
+            onBackRequested: pageLoader.sourceComponent = homePageComponent
             onTransactionSaved: pageLoader.sourceComponent = homePageComponent
         }
     }

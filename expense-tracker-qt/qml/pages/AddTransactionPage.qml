@@ -7,6 +7,7 @@ Item {
     id: root
 
     signal transactionSaved()
+    signal backRequested()
 
     property string transactionType: "expense"
     property string selectedCategory: "餐饮"
@@ -169,6 +170,36 @@ Item {
                 wrapMode: Text.WordWrap
                 visible: root.errorMessage.length > 0
             }
+        }
+    }
+
+    Rectangle {
+        id: cancelButton
+
+        anchors.top: parent.top
+        anchors.right: parent.right
+        anchors.margins: root.pageMargin
+        width: 72
+        height: 40
+        z: 2
+        radius: 8
+        color: cancelMouseArea.pressed ? "#f1f3f4" : "#ffffff"
+        border.color: "#dadce0"
+
+        Text {
+            anchors.centerIn: parent
+            text: "取消"
+            color: "#3c4043"
+            font.pixelSize: 15
+            font.bold: true
+        }
+
+        MouseArea {
+            id: cancelMouseArea
+
+            anchors.fill: parent
+            cursorShape: Qt.PointingHandCursor
+            onClicked: root.backRequested()
         }
     }
 
