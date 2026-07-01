@@ -7,6 +7,8 @@
 
 #include "../models/Transaction.h"
 
+struct TransactionFilter;
+
 class TransactionRepository
 {
 public:
@@ -14,6 +16,7 @@ public:
 
     int addTransaction(const Transaction &transaction);
     QList<Transaction> getAllTransactions();
+    QList<Transaction> getTransactionsByFilter(const TransactionFilter &filter);
     QList<Transaction> getTransactionsByMonth(int year, int month);
     std::optional<Transaction> getTransactionById(int id);
     bool updateTransaction(const Transaction &transaction);
