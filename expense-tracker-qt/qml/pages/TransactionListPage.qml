@@ -388,6 +388,7 @@ Item {
 
                                 anchors.fill: parent
                                 cursorShape: Qt.PointingHandCursor
+                                onClicked: appController.applyTransactionFilter("", "", root.selectedFilterType, "", "", "", "")
                             }
                         }
 
@@ -418,6 +419,7 @@ Item {
                                     keywordFilterInput.text = ""
                                     minAmountFilterInput.text = ""
                                     maxAmountFilterInput.text = ""
+                                    appController.clearTransactionFilter()
                                 }
                             }
                         }
