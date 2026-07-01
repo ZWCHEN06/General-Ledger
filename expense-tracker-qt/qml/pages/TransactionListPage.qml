@@ -7,6 +7,8 @@ Item {
 
     signal editTransactionRequested(int transactionId)
     signal backRequested()
+    property bool filterExpanded: false
+    property string selectedFilterType: "all"
     readonly property int pageMargin: Math.max(16, Math.min(24, Math.round(width * 0.05)))
     readonly property int bottomInset: Qt.platform.os === "android" ? 72 : pageMargin
 
@@ -27,13 +29,401 @@ Item {
         model: transactionListModel
         visible: appController.databaseReady
 
-        header: Text {
+        header: Item {
+            id: listHeader
+
             width: transactionListView.width
-            height: 48
-            text: "账单列表"
-            color: "#202124"
-            font.pixelSize: 28
-            font.bold: true
+            height: titleRow.height + (root.filterExpanded ? filterPanel.height + 12 : 0)
+
+            Item {
+                id: titleRow
+
+                width: parent.width
+                height: 48
+
+                Text {
+                    anchors.left: parent.left
+                    anchors.right: filterToggleButton.left
+                    anchors.rightMargin: 12
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: "账单列表"
+                    color: "#202124"
+                    font.pixelSize: 28
+                    font.bold: true
+                    elide: Text.ElideRight
+                }
+
+                Rectangle {
+                    id: filterToggleButton
+
+                    anchors.right: parent.right
+                    anchors.rightMargin: 84
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: 72
+                    height: 40
+                    radius: 8
+                    color: filterToggleMouseArea.pressed ? "#e8f0fe" : "#ffffff"
+                    border.color: root.filterExpanded ? "#1a73e8" : "#dadce0"
+
+                    Text {
+                        anchors.centerIn: parent
+                        text: root.filterExpanded ? "收起" : "筛选"
+                        color: root.filterExpanded ? "#1a73e8" : "#3c4043"
+                        font.pixelSize: 15
+                        font.bold: true
+                    }
+
+                    MouseArea {
+                        id: filterToggleMouseArea
+
+                        anchors.fill: parent
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: root.filterExpanded = !root.filterExpanded
+                    }
+                }
+            }
+
+            Rectangle {
+                id: filterPanel
+
+                anchors.top: titleRow.bottom
+                width: parent.width
+                height: 512
+                visible: root.filterExpanded
+                radius: 8
+                color: "#ffffff"
+                border.color: "#dadce0"
+
+                Column {
+                    anchors.fill: parent
+                    anchors.margins: 12
+                    spacing: 10
+
+                    Item {
+                        width: parent.width
+                        height: 64
+
+                        Text {
+                            anchors.left: parent.left
+                            anchors.top: parent.top
+                            text: "月份（YYYY-MM）"
+                            color: "#3c4043"
+                            font.pixelSize: 14
+                            font.bold: true
+                        }
+
+                        Rectangle {
+                            anchors.left: parent.left
+                            anchors.right: parent.right
+                            anchors.bottom: parent.bottom
+                            height: 38
+                            radius: 6
+                            color: "#ffffff"
+                            border.color: "#dadce0"
+
+                            TextInput {
+                                id: monthFilterInput
+
+                                anchors.fill: parent
+                                anchors.margins: 10
+                                color: "#202124"
+                                font.pixelSize: 16
+                                verticalAlignment: TextInput.AlignVCenter
+                                clip: true
+                            }
+                        }
+                    }
+
+                    Item {
+                        width: parent.width
+                        height: 64
+
+                        Text {
+                            anchors.left: parent.left
+                            anchors.top: parent.top
+                            text: "类型"
+                            color: "#3c4043"
+                            font.pixelSize: 14
+                            font.bold: true
+                        }
+
+                        Row {
+                            anchors.left: parent.left
+                            anchors.right: parent.right
+                            anchors.bottom: parent.bottom
+                            height: 38
+                            spacing: 8
+
+                            Rectangle {
+                                width: (parent.width - 16) / 3
+                                height: parent.height
+                                radius: 6
+                                color: root.selectedFilterType === "all" ? "#e8f0fe" : "#ffffff"
+                                border.color: root.selectedFilterType === "all" ? "#1a73e8" : "#dadce0"
+
+                                Text {
+                                    anchors.centerIn: parent
+                                    text: "全部"
+                                    color: root.selectedFilterType === "all" ? "#1a73e8" : "#3c4043"
+                                    font.pixelSize: 15
+                                    font.bold: true
+                                }
+
+                                MouseArea {
+                                    anchors.fill: parent
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: root.selectedFilterType = "all"
+                                }
+                            }
+
+                            Rectangle {
+                                width: (parent.width - 16) / 3
+                                height: parent.height
+                                radius: 6
+                                color: root.selectedFilterType === "income" ? "#e8f0fe" : "#ffffff"
+                                border.color: root.selectedFilterType === "income" ? "#1a73e8" : "#dadce0"
+
+                                Text {
+                                    anchors.centerIn: parent
+                                    text: "收入"
+                                    color: root.selectedFilterType === "income" ? "#1a73e8" : "#3c4043"
+                                    font.pixelSize: 15
+                                    font.bold: true
+                                }
+
+                                MouseArea {
+                                    anchors.fill: parent
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: root.selectedFilterType = "income"
+                                }
+                            }
+
+                            Rectangle {
+                                width: (parent.width - 16) / 3
+                                height: parent.height
+                                radius: 6
+                                color: root.selectedFilterType === "expense" ? "#e8f0fe" : "#ffffff"
+                                border.color: root.selectedFilterType === "expense" ? "#1a73e8" : "#dadce0"
+
+                                Text {
+                                    anchors.centerIn: parent
+                                    text: "支出"
+                                    color: root.selectedFilterType === "expense" ? "#1a73e8" : "#3c4043"
+                                    font.pixelSize: 15
+                                    font.bold: true
+                                }
+
+                                MouseArea {
+                                    anchors.fill: parent
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: root.selectedFilterType = "expense"
+                                }
+                            }
+                        }
+                    }
+
+                    Item {
+                        width: parent.width
+                        height: 64
+
+                        Text {
+                            anchors.left: parent.left
+                            anchors.top: parent.top
+                            text: "分类"
+                            color: "#3c4043"
+                            font.pixelSize: 14
+                            font.bold: true
+                        }
+
+                        Rectangle {
+                            anchors.left: parent.left
+                            anchors.right: parent.right
+                            anchors.bottom: parent.bottom
+                            height: 38
+                            radius: 6
+                            color: "#ffffff"
+                            border.color: "#dadce0"
+
+                            TextInput {
+                                id: categoryFilterInput
+
+                                anchors.fill: parent
+                                anchors.margins: 10
+                                color: "#202124"
+                                font.pixelSize: 16
+                                verticalAlignment: TextInput.AlignVCenter
+                                clip: true
+                            }
+                        }
+                    }
+
+                    Item {
+                        width: parent.width
+                        height: 64
+
+                        Text {
+                            anchors.left: parent.left
+                            anchors.top: parent.top
+                            text: "关键词"
+                            color: "#3c4043"
+                            font.pixelSize: 14
+                            font.bold: true
+                        }
+
+                        Rectangle {
+                            anchors.left: parent.left
+                            anchors.right: parent.right
+                            anchors.bottom: parent.bottom
+                            height: 38
+                            radius: 6
+                            color: "#ffffff"
+                            border.color: "#dadce0"
+
+                            TextInput {
+                                id: keywordFilterInput
+
+                                anchors.fill: parent
+                                anchors.margins: 10
+                                color: "#202124"
+                                font.pixelSize: 16
+                                verticalAlignment: TextInput.AlignVCenter
+                                clip: true
+                            }
+                        }
+                    }
+
+                    Item {
+                        width: parent.width
+                        height: 64
+
+                        Text {
+                            anchors.left: parent.left
+                            anchors.top: parent.top
+                            text: "最小金额"
+                            color: "#3c4043"
+                            font.pixelSize: 14
+                            font.bold: true
+                        }
+
+                        Rectangle {
+                            anchors.left: parent.left
+                            anchors.right: parent.right
+                            anchors.bottom: parent.bottom
+                            height: 38
+                            radius: 6
+                            color: "#ffffff"
+                            border.color: "#dadce0"
+
+                            TextInput {
+                                id: minAmountFilterInput
+
+                                anchors.fill: parent
+                                anchors.margins: 10
+                                color: "#202124"
+                                font.pixelSize: 16
+                                inputMethodHints: Qt.ImhFormattedNumbersOnly
+                                verticalAlignment: TextInput.AlignVCenter
+                                clip: true
+                            }
+                        }
+                    }
+
+                    Item {
+                        width: parent.width
+                        height: 64
+
+                        Text {
+                            anchors.left: parent.left
+                            anchors.top: parent.top
+                            text: "最大金额"
+                            color: "#3c4043"
+                            font.pixelSize: 14
+                            font.bold: true
+                        }
+
+                        Rectangle {
+                            anchors.left: parent.left
+                            anchors.right: parent.right
+                            anchors.bottom: parent.bottom
+                            height: 38
+                            radius: 6
+                            color: "#ffffff"
+                            border.color: "#dadce0"
+
+                            TextInput {
+                                id: maxAmountFilterInput
+
+                                anchors.fill: parent
+                                anchors.margins: 10
+                                color: "#202124"
+                                font.pixelSize: 16
+                                inputMethodHints: Qt.ImhFormattedNumbersOnly
+                                verticalAlignment: TextInput.AlignVCenter
+                                clip: true
+                            }
+                        }
+                    }
+
+                    Row {
+                        width: parent.width
+                        height: 44
+                        spacing: 10
+
+                        Rectangle {
+                            width: (parent.width - 10) / 2
+                            height: parent.height
+                            radius: 8
+                            color: applyFilterMouseArea.pressed ? "#1558b0" : "#1a73e8"
+
+                            Text {
+                                anchors.centerIn: parent
+                                text: "应用筛选"
+                                color: "#ffffff"
+                                font.pixelSize: 15
+                                font.bold: true
+                            }
+
+                            MouseArea {
+                                id: applyFilterMouseArea
+
+                                anchors.fill: parent
+                                cursorShape: Qt.PointingHandCursor
+                            }
+                        }
+
+                        Rectangle {
+                            width: (parent.width - 10) / 2
+                            height: parent.height
+                            radius: 8
+                            color: clearFilterMouseArea.pressed ? "#f1f3f4" : "#ffffff"
+                            border.color: "#dadce0"
+
+                            Text {
+                                anchors.centerIn: parent
+                                text: "清空筛选"
+                                color: "#3c4043"
+                                font.pixelSize: 15
+                                font.bold: true
+                            }
+
+                            MouseArea {
+                                id: clearFilterMouseArea
+
+                                anchors.fill: parent
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: {
+                                    monthFilterInput.text = ""
+                                    root.selectedFilterType = "all"
+                                    categoryFilterInput.text = ""
+                                    keywordFilterInput.text = ""
+                                    minAmountFilterInput.text = ""
+                                    maxAmountFilterInput.text = ""
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
 
         delegate: Rectangle {
