@@ -1,6 +1,7 @@
 #include "DatabaseManager.h"
 
 #include <QDebug>
+#include <QDateTime>
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
@@ -211,6 +212,10 @@ bool DatabaseManager::migrateDatabase()
         return false;
     }
 
+    if (version < 3 && !migrateToVersion3()) {
+        return false;
+    }
+
     return true;
 }
 
@@ -282,6 +287,40 @@ bool DatabaseManager::migrateToVersion2()
     return true;
 }
 
+bool DatabaseManager::migrateToVersion3()
+{
+    if (!m_database.transaction()) {
+        m_lastErrorMessage = QStringLiteral("Failed to start SQLite schema migration to version 3: %1")
+                                 .arg(m_database.lastError().text());
+        qWarning().noquote() << "Failed to start SQLite schema migration transaction:"
+                             << m_database.lastError().text();
+        return false;
+    }
+
+    const auto rollbackMigration = [this]() {
+        if (!m_database.rollback()) {
+            qWarning().noquote() << "Failed to roll back SQLite schema migration:"
+                                 << m_database.lastError().text();
+        }
+    };
+
+    if (!seedDefaultCategories() || !setUserVersion(3)) {
+        rollbackMigration();
+        return false;
+    }
+
+    if (!m_database.commit()) {
+        m_lastErrorMessage = QStringLiteral("Failed to commit SQLite schema migration to version 3: %1")
+                                 .arg(m_database.lastError().text());
+        qWarning().noquote() << "Failed to commit SQLite schema migration:"
+                             << m_database.lastError().text();
+        rollbackMigration();
+        return false;
+    }
+
+    return true;
+}
+
 bool DatabaseManager::createCategoriesTable()
 {
     QSqlQuery query(m_database);
@@ -315,6 +354,78 @@ bool DatabaseManager::createCategoriesTable()
                                  .arg(query.lastError().text());
         qWarning().noquote() << "Failed to create categories index:" << query.lastError().text();
         return false;
+    }
+
+    return true;
+}
+
+bool DatabaseManager::seedDefaultCategories()
+{
+    struct DefaultCategorySeed
+    {
+        QString name;
+        QString type;
+        int sortOrder;
+    };
+
+    const DefaultCategorySeed defaultCategories[] = {
+        {QStringLiteral("餐饮"), QStringLiteral("expense"), 0},
+        {QStringLiteral("交通"), QStringLiteral("expense"), 1},
+        {QStringLiteral("购物"), QStringLiteral("expense"), 2},
+        {QStringLiteral("学习"), QStringLiteral("expense"), 3},
+        {QStringLiteral("娱乐"), QStringLiteral("expense"), 4},
+        {QStringLiteral("住房"), QStringLiteral("expense"), 5},
+        {QStringLiteral("医疗"), QStringLiteral("expense"), 6},
+        {QStringLiteral("其他"), QStringLiteral("expense"), 7},
+        {QStringLiteral("生活费"), QStringLiteral("income"), 0},
+        {QStringLiteral("工资"), QStringLiteral("income"), 1},
+        {QStringLiteral("奖学金"), QStringLiteral("income"), 2},
+        {QStringLiteral("兼职"), QStringLiteral("income"), 3},
+        {QStringLiteral("投资"), QStringLiteral("income"), 4},
+        {QStringLiteral("其他"), QStringLiteral("income"), 5}
+    };
+
+    QSqlQuery query(m_database);
+    if (!query.prepare(QStringLiteral(R"(
+        INSERT OR IGNORE INTO categories (
+            name,
+            type,
+            is_default,
+            sort_order,
+            created_at,
+            updated_at
+        ) VALUES (
+            :name,
+            :type,
+            1,
+            :sort_order,
+            :created_at,
+            :updated_at
+        )
+    )"))) {
+        m_lastErrorMessage = QStringLiteral("Failed to prepare default category seed SQL during schema migration to version 3: %1")
+                                 .arg(query.lastError().text());
+        qWarning().noquote() << "Failed to prepare default category seed SQL:"
+                             << query.lastError().text();
+        return false;
+    }
+
+    const QString now = QDateTime::currentDateTime().toString(Qt::ISODate);
+    for (const DefaultCategorySeed &category : defaultCategories) {
+        query.bindValue(QStringLiteral(":name"), category.name);
+        query.bindValue(QStringLiteral(":type"), category.type);
+        query.bindValue(QStringLiteral(":sort_order"), category.sortOrder);
+        query.bindValue(QStringLiteral(":created_at"), now);
+        query.bindValue(QStringLiteral(":updated_at"), now);
+
+        if (!query.exec()) {
+            m_lastErrorMessage = QStringLiteral("Failed to seed default category '%1' during schema migration to version 3: %2")
+                                     .arg(category.name)
+                                     .arg(query.lastError().text());
+            qWarning().noquote() << "Failed to seed default category:"
+                                 << category.type << category.name << query.lastError().text();
+            return false;
+        }
     }
 
     return true;
