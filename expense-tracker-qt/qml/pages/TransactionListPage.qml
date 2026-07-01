@@ -111,14 +111,29 @@ Item {
         minAmountFilterInput.text = state.minAmount
         maxAmountFilterInput.text = state.maxAmount
         filterActive = state.filterActive
-        filterErrorMessage = ""
+    }
+
+    function refreshCurrentList() {
+        var result = appController.refreshTransactionList()
+        filterErrorMessage = result.success ? "" : result.errorMessage
+        if (result.success) {
+            filterActive = result.filterActive
+        }
     }
 
     Component.onCompleted: {
         if (appController.databaseReady) {
-            restoreCurrentFilter()
-            var result = appController.refreshTransactionList()
-            filterErrorMessage = result.success ? "" : result.errorMessage
+            refreshCurrentList()
+        }
+    }
+
+    Connections {
+        target: appController
+
+        function onDatabaseStatusChanged() {
+            if (appController.databaseReady) {
+                root.refreshCurrentList()
+            }
         }
     }
 
@@ -138,6 +153,8 @@ Item {
 
             width: transactionListView.width
             height: titleRow.height + (root.filterExpanded ? filterPanel.height + 12 : 0)
+
+            Component.onCompleted: root.restoreCurrentFilter()
 
             Item {
                 id: titleRow

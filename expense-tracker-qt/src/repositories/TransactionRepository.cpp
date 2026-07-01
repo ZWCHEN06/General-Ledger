@@ -181,7 +181,7 @@ QList<Transaction> TransactionRepository::getAllTransactions()
             created_at,
             updated_at
         FROM transactions
-        ORDER BY date DESC
+        ORDER BY date DESC, created_at DESC
     )"));
 
     if (!prepared) {
