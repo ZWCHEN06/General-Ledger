@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Transaction.h"
+#include "TransactionFilter.h"
 
 #include <QAbstractListModel>
 #include <QList>
@@ -30,6 +31,7 @@ public:
     QHash<int, QByteArray> roleNames() const override;
 
     Q_INVOKABLE void refresh();
+    void refreshWithFilter(TransactionFilter filter);
 
     void setTransactionRepository(TransactionRepository *transactionRepository);
     void setTransactions(const QList<Transaction> &transactions);

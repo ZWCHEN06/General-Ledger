@@ -72,6 +72,16 @@ void TransactionListModel::refresh()
     setTransactions(m_transactionRepository->getAllTransactions());
 }
 
+void TransactionListModel::refreshWithFilter(TransactionFilter filter)
+{
+    if (!m_transactionRepository) {
+        setTransactions({});
+        return;
+    }
+
+    setTransactions(m_transactionRepository->getTransactionsByFilter(filter));
+}
+
 void TransactionListModel::setTransactionRepository(TransactionRepository *transactionRepository)
 {
     m_transactionRepository = transactionRepository;
