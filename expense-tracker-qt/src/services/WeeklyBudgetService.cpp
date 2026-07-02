@@ -47,3 +47,25 @@ QList<WeeklyBudgetComparisonItem> WeeklyBudgetService::calculate(
 
     return result;
 }
+
+WeeklyBudgetSummary WeeklyBudgetService::summarize(const QList<WeeklyBudgetComparisonItem> &items) const
+{
+    WeeklyBudgetSummary summary;
+
+    for (const WeeklyBudgetComparisonItem &item : items) {
+        if (item.hasBudget) {
+            summary.totalBudget += item.budgetAmount;
+        }
+
+        summary.totalActual += item.actualAmount;
+    }
+
+    summary.totalRemaining = summary.totalBudget - summary.totalActual;
+    summary.isTotalOverBudget = summary.totalActual > summary.totalBudget;
+
+    if (summary.totalBudget > 0.0) {
+        summary.totalUsagePercent = summary.totalActual / summary.totalBudget * 100.0;
+    }
+
+    return summary;
+}

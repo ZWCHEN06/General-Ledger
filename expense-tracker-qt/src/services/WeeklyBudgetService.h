@@ -13,4 +13,5 @@ public:
     QList<WeeklyBudgetComparisonItem> calculate(const QList<Category> &categories,
                                                 const QList<WeeklyBudget> &budgets,
                                                 const QHash<int, double> &actualExpensesByCategory) const;
+    WeeklyBudgetSummary summarize(const QList<WeeklyBudgetComparisonItem> &items) const;
 };
