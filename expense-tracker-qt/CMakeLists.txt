@@ -36,6 +36,8 @@ qt_add_executable(expense-tracker-qt
     src/services/CsvExportService.h
     src/services/SummaryService.cpp
     src/services/SummaryService.h
+    src/utils/WeekUtils.cpp
+    src/utils/WeekUtils.h
 )
 
 qt_add_qml_module(expense-tracker-qt
