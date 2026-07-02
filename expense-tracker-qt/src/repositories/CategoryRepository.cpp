@@ -145,6 +145,133 @@ CategoryRepositoryResult CategoryRepository::addCategory(const QString &name, Tr
     };
 }
 
+CategoryRepositoryResult CategoryRepository::deleteCategory(int id)
+{
+    if (id <= 0) {
+        return CategoryRepositoryResult {
+            false,
+            0,
+            QStringLiteral("分类 id 不正确")
+        };
+    }
+
+    if (!m_database.isOpen()) {
+        return CategoryRepositoryResult {
+            false,
+            0,
+            QStringLiteral("数据库未打开，无法删除分类")
+        };
+    }
+
+    QSqlQuery categoryQuery(m_database);
+    if (!categoryQuery.prepare(QStringLiteral(R"(
+        SELECT
+            name,
+            type,
+            is_default
+        FROM categories
+        WHERE id = :id
+        LIMIT 1
+    )"))) {
+        const QString error = QStringLiteral("查询分类失败：%1").arg(categoryQuery.lastError().text());
+        qWarning().noquote() << error;
+        return CategoryRepositoryResult {false, 0, error};
+    }
+
+    categoryQuery.bindValue(QStringLiteral(":id"), id);
+
+    if (!categoryQuery.exec()) {
+        const QString error = QStringLiteral("查询分类失败：%1").arg(categoryQuery.lastError().text());
+        qWarning().noquote() << error;
+        return CategoryRepositoryResult {false, 0, error};
+    }
+
+    if (!categoryQuery.next()) {
+        return CategoryRepositoryResult {
+            false,
+            0,
+            QStringLiteral("分类不存在")
+        };
+    }
+
+    const QString categoryName = categoryQuery.value(QStringLiteral("name")).toString();
+    const QString typeText = categoryQuery.value(QStringLiteral("type")).toString();
+    const bool isDefault = categoryQuery.value(QStringLiteral("is_default")).toInt() == 1;
+    if (isDefault) {
+        return CategoryRepositoryResult {
+            false,
+            0,
+            QStringLiteral("默认分类不能删除")
+        };
+    }
+
+    QSqlQuery usageQuery(m_database);
+    if (!usageQuery.prepare(QStringLiteral(R"(
+        SELECT COUNT(*)
+        FROM transactions
+        WHERE category_id = :id
+           OR (
+               category_id IS NULL
+               AND category = :name
+               AND type = :type
+           )
+    )"))) {
+        const QString error = QStringLiteral("检查分类使用状态失败：%1").arg(usageQuery.lastError().text());
+        qWarning().noquote() << error;
+        return CategoryRepositoryResult {false, 0, error};
+    }
+
+    usageQuery.bindValue(QStringLiteral(":id"), id);
+    usageQuery.bindValue(QStringLiteral(":name"), categoryName);
+    usageQuery.bindValue(QStringLiteral(":type"), typeText);
+
+    if (!usageQuery.exec() || !usageQuery.next()) {
+        const QString error = QStringLiteral("检查分类使用状态失败：%1").arg(usageQuery.lastError().text());
+        qWarning().noquote() << error;
+        return CategoryRepositoryResult {false, 0, error};
+    }
+
+    if (usageQuery.value(0).toInt() > 0) {
+        return CategoryRepositoryResult {
+            false,
+            0,
+            QStringLiteral("该分类已有账单使用，不能删除")
+        };
+    }
+
+    QSqlQuery deleteQuery(m_database);
+    if (!deleteQuery.prepare(QStringLiteral(R"(
+        DELETE FROM categories
+        WHERE id = :id
+    )"))) {
+        const QString error = QStringLiteral("删除分类失败：%1").arg(deleteQuery.lastError().text());
+        qWarning().noquote() << error;
+        return CategoryRepositoryResult {false, 0, error};
+    }
+
+    deleteQuery.bindValue(QStringLiteral(":id"), id);
+
+    if (!deleteQuery.exec()) {
+        const QString error = QStringLiteral("删除分类失败：%1").arg(deleteQuery.lastError().text());
+        qWarning().noquote() << error;
+        return CategoryRepositoryResult {false, 0, error};
+    }
+
+    if (deleteQuery.numRowsAffected() <= 0) {
+        return CategoryRepositoryResult {
+            false,
+            0,
+            QStringLiteral("分类不存在")
+        };
+    }
+
+    return CategoryRepositoryResult {
+        true,
+        id,
+        QString()
+    };
+}
+
 CategoryRepositoryResult CategoryRepository::updateCategoryName(int id, const QString &name)
 {
     if (id <= 0) {

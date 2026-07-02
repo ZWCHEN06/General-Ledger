@@ -19,6 +19,7 @@ public:
 
     CategoryRepositoryResult addCategory(const QString &name, TransactionType type);
     CategoryRepositoryResult updateCategoryName(int id, const QString &name);
+    CategoryRepositoryResult deleteCategory(int id);
 
 private:
     QSqlDatabase m_database;
