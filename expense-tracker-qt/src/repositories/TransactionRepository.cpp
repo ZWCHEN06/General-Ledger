@@ -18,6 +18,10 @@ namespace {
 std::optional<Transaction> transactionFromCurrentRow(const QSqlQuery &query)
 {
     const int id = query.value(QStringLiteral("id")).toInt();
+    const QVariant categoryIdValue = query.value(QStringLiteral("category_id"));
+    const std::optional<int> categoryId = categoryIdValue.isNull()
+        ? std::nullopt
+        : std::optional<int>(categoryIdValue.toInt());
 
     bool typeOk = false;
     const TransactionType type = Transaction::typeFromString(query.value(QStringLiteral("type")).toString(), &typeOk);
@@ -34,7 +38,8 @@ std::optional<Transaction> transactionFromCurrentRow(const QSqlQuery &query)
         query.value(QStringLiteral("date")).toString(),
         query.value(QStringLiteral("note")).toString(),
         query.value(QStringLiteral("created_at")).toString(),
-        query.value(QStringLiteral("updated_at")).toString());
+        query.value(QStringLiteral("updated_at")).toString(),
+        categoryId);
 }
 
 QDate parseStoredTransactionDate(const QString &date)
@@ -176,6 +181,7 @@ QList<Transaction> TransactionRepository::getAllTransactions()
             type,
             amount,
             category,
+            category_id,
             date,
             note,
             created_at,
@@ -249,6 +255,7 @@ QList<Transaction> TransactionRepository::getTransactionsByFilter(const Transact
             type,
             amount,
             category,
+            category_id,
             date,
             note,
             created_at,
@@ -332,6 +339,7 @@ QList<Transaction> TransactionRepository::getTransactionsByMonth(int year, int m
             type,
             amount,
             category,
+            category_id,
             date,
             note,
             created_at,
@@ -386,6 +394,7 @@ std::optional<Transaction> TransactionRepository::getTransactionById(int id)
             type,
             amount,
             category,
+            category_id,
             date,
             note,
             created_at,
