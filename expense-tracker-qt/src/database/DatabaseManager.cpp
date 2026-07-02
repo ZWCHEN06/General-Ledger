@@ -220,6 +220,10 @@ bool DatabaseManager::migrateDatabase()
         return false;
     }
 
+    if (version < 5 && !migrateToVersion5()) {
+        return false;
+    }
+
     return true;
 }
 
@@ -359,6 +363,40 @@ bool DatabaseManager::migrateToVersion4()
     return true;
 }
 
+bool DatabaseManager::migrateToVersion5()
+{
+    if (!m_database.transaction()) {
+        m_lastErrorMessage = QStringLiteral("Failed to start SQLite schema migration to version 5: %1")
+                                 .arg(m_database.lastError().text());
+        qWarning().noquote() << "Failed to start SQLite schema migration transaction:"
+                             << m_database.lastError().text();
+        return false;
+    }
+
+    const auto rollbackMigration = [this]() {
+        if (!m_database.rollback()) {
+            qWarning().noquote() << "Failed to roll back SQLite schema migration:"
+                                 << m_database.lastError().text();
+        }
+    };
+
+    if (!createWeeklyBudgetsTable() || !setUserVersion(5)) {
+        rollbackMigration();
+        return false;
+    }
+
+    if (!m_database.commit()) {
+        m_lastErrorMessage = QStringLiteral("Failed to commit SQLite schema migration to version 5: %1")
+                                 .arg(m_database.lastError().text());
+        qWarning().noquote() << "Failed to commit SQLite schema migration:"
+                             << m_database.lastError().text();
+        rollbackMigration();
+        return false;
+    }
+
+    return true;
+}
+
 bool DatabaseManager::createCategoriesTable()
 {
     QSqlQuery query(m_database);
@@ -391,6 +429,56 @@ bool DatabaseManager::createCategoriesTable()
         m_lastErrorMessage = QStringLiteral("Failed to create categories index during schema migration to version 1: %1")
                                  .arg(query.lastError().text());
         qWarning().noquote() << "Failed to create categories index:" << query.lastError().text();
+        return false;
+    }
+
+    return true;
+}
+
+bool DatabaseManager::createWeeklyBudgetsTable()
+{
+    QSqlQuery query(m_database);
+    const bool tableCreated = query.exec(QStringLiteral(R"(
+        CREATE TABLE IF NOT EXISTS weekly_budgets (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            week_start_date TEXT NOT NULL,
+            category_id INTEGER NOT NULL,
+            amount REAL NOT NULL CHECK (amount >= 0),
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            UNIQUE(week_start_date, category_id),
+            FOREIGN KEY(category_id) REFERENCES categories(id)
+        )
+    )"));
+
+    if (!tableCreated) {
+        m_lastErrorMessage = QStringLiteral("Failed to create weekly_budgets table during schema migration to version 5: %1")
+                                 .arg(query.lastError().text());
+        qWarning().noquote() << "Failed to create weekly_budgets table:" << query.lastError().text();
+        return false;
+    }
+
+    const bool weekIndexCreated = query.exec(QStringLiteral(R"(
+        CREATE INDEX IF NOT EXISTS idx_weekly_budgets_week
+        ON weekly_budgets(week_start_date)
+    )"));
+
+    if (!weekIndexCreated) {
+        m_lastErrorMessage = QStringLiteral("Failed to create weekly_budgets week index during schema migration to version 5: %1")
+                                 .arg(query.lastError().text());
+        qWarning().noquote() << "Failed to create weekly_budgets week index:" << query.lastError().text();
+        return false;
+    }
+
+    const bool categoryWeekIndexCreated = query.exec(QStringLiteral(R"(
+        CREATE INDEX IF NOT EXISTS idx_weekly_budgets_category_week
+        ON weekly_budgets(category_id, week_start_date)
+    )"));
+
+    if (!categoryWeekIndexCreated) {
+        m_lastErrorMessage = QStringLiteral("Failed to create weekly_budgets category week index during schema migration to version 5: %1")
+                                 .arg(query.lastError().text());
+        qWarning().noquote() << "Failed to create weekly_budgets category week index:" << query.lastError().text();
         return false;
     }
 

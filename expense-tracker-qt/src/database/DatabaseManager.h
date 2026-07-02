@@ -19,7 +19,7 @@ public:
 private:
     static constexpr const char *ConnectionName = "expense_tracker_connection";
     static constexpr const char *DatabaseFileName = "expense_tracker.db";
-    static constexpr int CurrentSchemaVersion = 4;
+    static constexpr int CurrentSchemaVersion = 5;
 
     bool ensureTransactionsTable();
     int currentUserVersion();
@@ -29,7 +29,9 @@ private:
     bool migrateToVersion2();
     bool migrateToVersion3();
     bool migrateToVersion4();
+    bool migrateToVersion5();
     bool createCategoriesTable();
+    bool createWeeklyBudgetsTable();
     bool addTransactionCategoryIdColumn();
     bool seedDefaultCategories();
     bool backfillTransactionCategoryIds();
