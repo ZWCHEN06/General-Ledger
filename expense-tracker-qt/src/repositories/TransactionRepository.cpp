@@ -183,17 +183,20 @@ QList<Transaction> TransactionRepository::getAllTransactions()
     QSqlQuery query(m_database);
     const bool prepared = query.prepare(QStringLiteral(R"(
         SELECT
-            id,
-            type,
-            amount,
-            category,
-            category_id,
-            date,
-            note,
-            created_at,
-            updated_at
+            transactions.id AS id,
+            transactions.type AS type,
+            transactions.amount AS amount,
+            COALESCE(categories.name, transactions.category) AS category,
+            transactions.category_id AS category_id,
+            transactions.date AS date,
+            transactions.note AS note,
+            transactions.created_at AS created_at,
+            transactions.updated_at AS updated_at
         FROM transactions
-        ORDER BY date DESC, created_at DESC
+        LEFT JOIN categories
+          ON categories.id = transactions.category_id
+         AND categories.type = transactions.type
+        ORDER BY transactions.date DESC, transactions.created_at DESC
     )"));
 
     if (!prepared) {
@@ -234,39 +237,42 @@ QList<Transaction> TransactionRepository::getTransactionsByFilter(const Transact
     QStringList whereConditions;
 
     if (filter.type.has_value()) {
-        whereConditions.append(QStringLiteral("type = :type"));
+        whereConditions.append(QStringLiteral("transactions.type = :type"));
     }
 
     const QString category = filter.category.value_or(QString()).trimmed();
     if (!category.isEmpty()) {
-        whereConditions.append(QStringLiteral("category = :category"));
+        whereConditions.append(QStringLiteral("transactions.category = :category"));
     }
 
     const QString keyword = filter.keyword.value_or(QString()).trimmed();
     if (!keyword.isEmpty()) {
-        whereConditions.append(QStringLiteral("note LIKE :keyword ESCAPE '!'"));
+        whereConditions.append(QStringLiteral("transactions.note LIKE :keyword ESCAPE '!'"));
     }
 
     if (filter.minAmount.has_value()) {
-        whereConditions.append(QStringLiteral("amount >= :minAmount"));
+        whereConditions.append(QStringLiteral("transactions.amount >= :minAmount"));
     }
 
     if (filter.maxAmount.has_value()) {
-        whereConditions.append(QStringLiteral("amount <= :maxAmount"));
+        whereConditions.append(QStringLiteral("transactions.amount <= :maxAmount"));
     }
 
     QString sql = QStringLiteral(R"(
         SELECT
-            id,
-            type,
-            amount,
-            category,
-            category_id,
-            date,
-            note,
-            created_at,
-            updated_at
+            transactions.id AS id,
+            transactions.type AS type,
+            transactions.amount AS amount,
+            COALESCE(categories.name, transactions.category) AS category,
+            transactions.category_id AS category_id,
+            transactions.date AS date,
+            transactions.note AS note,
+            transactions.created_at AS created_at,
+            transactions.updated_at AS updated_at
         FROM transactions
+        LEFT JOIN categories
+          ON categories.id = transactions.category_id
+         AND categories.type = transactions.type
     )");
 
     if (!whereConditions.isEmpty()) {
@@ -275,7 +281,7 @@ QList<Transaction> TransactionRepository::getTransactionsByFilter(const Transact
         sql.append(QLatin1Char('\n'));
     }
 
-    sql.append(QStringLiteral("        ORDER BY date DESC, created_at DESC"));
+    sql.append(QStringLiteral("        ORDER BY transactions.date DESC, transactions.created_at DESC"));
 
     QSqlQuery query(m_database);
     const bool prepared = query.prepare(sql);
@@ -341,17 +347,20 @@ QList<Transaction> TransactionRepository::getTransactionsByMonth(int year, int m
     QSqlQuery query(m_database);
     const bool prepared = query.prepare(QStringLiteral(R"(
         SELECT
-            id,
-            type,
-            amount,
-            category,
-            category_id,
-            date,
-            note,
-            created_at,
-            updated_at
+            transactions.id AS id,
+            transactions.type AS type,
+            transactions.amount AS amount,
+            COALESCE(categories.name, transactions.category) AS category,
+            transactions.category_id AS category_id,
+            transactions.date AS date,
+            transactions.note AS note,
+            transactions.created_at AS created_at,
+            transactions.updated_at AS updated_at
         FROM transactions
-        ORDER BY date DESC, id DESC
+        LEFT JOIN categories
+          ON categories.id = transactions.category_id
+         AND categories.type = transactions.type
+        ORDER BY transactions.date DESC, transactions.id DESC
     )"));
 
     if (!prepared) {
@@ -396,17 +405,20 @@ std::optional<Transaction> TransactionRepository::getTransactionById(int id)
     QSqlQuery query(m_database);
     const bool prepared = query.prepare(QStringLiteral(R"(
         SELECT
-            id,
-            type,
-            amount,
-            category,
-            category_id,
-            date,
-            note,
-            created_at,
-            updated_at
+            transactions.id AS id,
+            transactions.type AS type,
+            transactions.amount AS amount,
+            COALESCE(categories.name, transactions.category) AS category,
+            transactions.category_id AS category_id,
+            transactions.date AS date,
+            transactions.note AS note,
+            transactions.created_at AS created_at,
+            transactions.updated_at AS updated_at
         FROM transactions
-        WHERE id = :id
+        LEFT JOIN categories
+          ON categories.id = transactions.category_id
+         AND categories.type = transactions.type
+        WHERE transactions.id = :id
         LIMIT 1
     )"));
 
