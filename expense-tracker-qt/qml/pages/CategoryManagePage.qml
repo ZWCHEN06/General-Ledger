@@ -436,14 +436,7 @@ Item {
         }
 
         delegate: CategoryItem {
-            required property int categoryId
-            required property string name
-            required property bool isDefault
-
             width: categoryListView.width
-            name: name
-            isDefault: isDefault
-            categoryId: categoryId
             onEditRequested: function(categoryId, name) {
                 root.startEdit(categoryId, name, isDefault)
             }

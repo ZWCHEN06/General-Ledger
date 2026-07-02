@@ -4,8 +4,8 @@ Rectangle {
     id: categoryItem
 
     required property string name
-    property bool isDefault: false
-    property int categoryId: -1
+    required property bool isDefault
+    required property int categoryId
 
     signal editRequested(int categoryId, string name)
     signal deleteRequested(int categoryId, string name)
