@@ -10,26 +10,32 @@ Item {
     signal backRequested()
 
     property string transactionType: "expense"
-    property string selectedCategory: "餐饮"
+    property int selectedCategoryId: -1
+    property string selectedCategoryName: ""
     property string errorMessage: ""
     readonly property int pageMargin: Math.max(16, Math.min(24, Math.round(width * 0.05)))
     readonly property int bottomInset: Qt.platform.os === "android" ? 96 : pageMargin
     readonly property int actionHeight: 52
 
-    readonly property var expenseCategories: ["餐饮", "交通", "购物", "娱乐"]
-    readonly property var incomeCategories: ["工资", "奖金", "兼职", "其他"]
-
-    function currentCategories() {
-        return transactionType === "income" ? incomeCategories : expenseCategories
+    function refreshCategories() {
+        selectedCategoryId = -1
+        selectedCategoryName = ""
+        categoryListModel.refresh(transactionType)
     }
 
     function saveTransaction() {
+        if (selectedCategoryId <= 0 || selectedCategoryName.length === 0) {
+            errorMessage = "请先选择分类"
+            return
+        }
+
         const result = appController.addTransaction(
             transactionType,
             amountField.text,
-            selectedCategory,
+            selectedCategoryName,
             dateField.text,
-            noteField.text
+            noteField.text,
+            selectedCategoryId
         )
 
         if (result.success) {
@@ -45,6 +51,8 @@ Item {
         if (dateField.text.length === 0) {
             dateField.text = Qt.formatDate(new Date(), "yyyy-MM-dd")
         }
+
+        refreshCategories()
     }
 
     Flickable {
@@ -88,7 +96,8 @@ Item {
                     selected: root.transactionType === value
                     onClicked: function(selectedType) {
                         root.transactionType = selectedType
-                        root.selectedCategory = root.currentCategories()[0]
+                        root.errorMessage = ""
+                        root.refreshCategories()
                     }
                 }
 
@@ -100,7 +109,8 @@ Item {
                     selected: root.transactionType === value
                     onClicked: function(selectedType) {
                         root.transactionType = selectedType
-                        root.selectedCategory = root.currentCategories()[0]
+                        root.errorMessage = ""
+                        root.refreshCategories()
                     }
                 }
             }
@@ -131,19 +141,41 @@ Item {
                 rowSpacing: 10
 
                 Repeater {
-                    model: root.currentCategories()
+                    id: categoryRepeater
+
+                    model: categoryListModel
+
                     delegate: CategoryOption {
-                        required property string modelData
+                        required property int index
 
                         width: (categoryGrid.width - categoryGrid.columnSpacing) / 2
                         height: 44
-                        label: modelData
-                        selected: root.selectedCategory === modelData
+                        label: String(model.name)
+                        selected: root.selectedCategoryId === Number(model.id)
+
+                        Component.onCompleted: {
+                            if (index === 0 && root.selectedCategoryId <= 0) {
+                                root.selectedCategoryId = Number(model.id)
+                                root.selectedCategoryName = String(model.name)
+                            }
+                        }
+
                         onClicked: function(categoryName) {
-                            root.selectedCategory = categoryName
+                            root.selectedCategoryId = Number(model.id)
+                            root.selectedCategoryName = categoryName
+                            root.errorMessage = ""
                         }
                     }
                 }
+            }
+
+            Text {
+                width: parent.width
+                text: "暂无可用分类，请先在设置中添加分类"
+                color: "#5f6368"
+                font.pixelSize: 15
+                wrapMode: Text.WordWrap
+                visible: categoryRepeater.count === 0
             }
 
             FormField {
@@ -231,5 +263,4 @@ Item {
             onClicked: root.saveTransaction()
         }
     }
-
 }
