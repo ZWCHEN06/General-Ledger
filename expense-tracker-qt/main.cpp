@@ -2,6 +2,7 @@
 #include "src/database/DatabaseManager.h"
 #include "src/models/CategoryListModel.h"
 #include "src/models/TransactionListModel.h"
+#include "src/models/WeeklyBudgetListModel.h"
 #include "src/repositories/CategoryRepository.h"
 #include "src/repositories/TransactionRepository.h"
 
@@ -48,9 +49,11 @@ int main(int argc, char *argv[])
 
     TransactionListModel transactionListModel(&transactionRepository);
     CategoryListModel categoryListModel(&categoryRepository);
+    WeeklyBudgetListModel weeklyBudgetListModel;
     appController.setTransactionListModel(&transactionListModel);
     appController.setCategoryRepository(&categoryRepository);
     appController.setCategoryListModel(&categoryListModel);
+    appController.setWeeklyBudgetListModel(&weeklyBudgetListModel);
     engine.rootContext()->setContextProperty(QStringLiteral("appController"), &appController);
     engine.rootContext()->setContextProperty(QStringLiteral("transactionListModel"), &transactionListModel);
     engine.rootContext()->setContextProperty(QStringLiteral("categoryListModel"), &categoryListModel);

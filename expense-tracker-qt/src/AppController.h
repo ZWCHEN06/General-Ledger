@@ -1,6 +1,7 @@
 #pragma once
 
 #include "models/TransactionFilter.h"
+#include "models/WeeklyBudgetListModel.h"
 
 #include <QObject>
 #include <QString>
@@ -18,6 +19,7 @@ class AppController : public QObject
     Q_PROPERTY(bool databaseReady READ databaseReady NOTIFY databaseStatusChanged)
     Q_PROPERTY(QString databaseErrorMessage READ databaseErrorMessage NOTIFY databaseStatusChanged)
     Q_PROPERTY(bool transactionFilterActive READ transactionFilterActive NOTIFY transactionFilterChanged)
+    Q_PROPERTY(WeeklyBudgetListModel* weeklyBudgetListModel READ weeklyBudgetListModel CONSTANT)
 
 public:
     explicit AppController(QObject *parent = nullptr);
@@ -26,6 +28,7 @@ public:
     bool databaseReady() const;
     QString databaseErrorMessage() const;
     bool transactionFilterActive() const;
+    WeeklyBudgetListModel *weeklyBudgetListModel() const;
     void setDatabaseStatus(bool ready, const QString &errorMessage);
 
     Q_INVOKABLE QString testMessage() const;
@@ -76,6 +79,7 @@ public:
     void setTransactionListModel(TransactionListModel *transactionListModel);
     void setCategoryRepository(CategoryRepository *categoryRepository);
     void setCategoryListModel(CategoryListModel *categoryListModel);
+    void setWeeklyBudgetListModel(WeeklyBudgetListModel *weeklyBudgetListModel);
 
 signals:
     void databaseStatusChanged();
@@ -88,6 +92,7 @@ private:
     TransactionListModel *m_transactionListModel = nullptr;
     CategoryRepository *m_categoryRepository = nullptr;
     CategoryListModel *m_categoryListModel = nullptr;
+    WeeklyBudgetListModel *m_weeklyBudgetListModel = nullptr;
     TransactionFilter m_transactionFilter;
     bool m_transactionFilterActive = false;
     bool m_databaseReady = true;

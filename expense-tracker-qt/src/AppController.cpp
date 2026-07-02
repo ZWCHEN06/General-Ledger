@@ -4,6 +4,7 @@
 #include "models/Transaction.h"
 #include "models/TransactionFilter.h"
 #include "models/TransactionListModel.h"
+#include "models/WeeklyBudgetListModel.h"
 #include "repositories/CategoryRepository.h"
 #include "repositories/TransactionRepository.h"
 #include "services/CategorySummaryService.h"
@@ -251,6 +252,11 @@ bool AppController::transactionFilterActive() const
     return m_transactionFilterActive;
 }
 
+WeeklyBudgetListModel *AppController::weeklyBudgetListModel() const
+{
+    return m_weeklyBudgetListModel;
+}
+
 void AppController::setDatabaseStatus(bool ready, const QString &errorMessage)
 {
     if (m_databaseReady == ready && m_databaseErrorMessage == errorMessage) {
@@ -275,6 +281,11 @@ void AppController::setCategoryRepository(CategoryRepository *categoryRepository
 void AppController::setCategoryListModel(CategoryListModel *categoryListModel)
 {
     m_categoryListModel = categoryListModel;
+}
+
+void AppController::setWeeklyBudgetListModel(WeeklyBudgetListModel *weeklyBudgetListModel)
+{
+    m_weeklyBudgetListModel = weeklyBudgetListModel;
 }
 
 QString AppController::effectiveDatabaseErrorMessage() const
