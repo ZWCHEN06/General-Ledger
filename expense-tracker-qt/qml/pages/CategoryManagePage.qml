@@ -10,8 +10,10 @@ Item {
 
     property string selectedType: "expense"
     property string errorMessage: ""
+    property string newCategoryName: ""
     property int editingCategoryId: -1
     property string editingCategoryName: ""
+    property string editingCategoryDraftName: ""
     property int deletingCategoryId: -1
     property string deletingCategoryName: ""
     property bool deleteConfirmVisible: false
@@ -25,7 +27,7 @@ Item {
     function cancelEdit() {
         root.editingCategoryId = -1
         root.editingCategoryName = ""
-        editNameInput.text = ""
+        root.editingCategoryDraftName = ""
     }
 
     function cancelDelete() {
@@ -79,12 +81,11 @@ Item {
         root.errorMessage = ""
         root.editingCategoryId = categoryId
         root.editingCategoryName = categoryName
-        editNameInput.text = categoryName
-        editNameInput.forceActiveFocus()
+        root.editingCategoryDraftName = categoryName
     }
 
     function submitCategory() {
-        const categoryName = categoryNameInput.text.trim()
+        const categoryName = root.newCategoryName.trim()
         if (categoryName.length === 0) {
             root.errorMessage = "分类名称不能为空"
             return
@@ -99,7 +100,7 @@ Item {
         }
 
         root.errorMessage = ""
-        categoryNameInput.text = ""
+        root.newCategoryName = ""
         root.refreshCategories()
     }
 
@@ -108,7 +109,7 @@ Item {
             return
         }
 
-        const categoryName = editNameInput.text.trim()
+        const categoryName = root.editingCategoryDraftName.trim()
         if (categoryName.length === 0) {
             root.errorMessage = "分类名称不能为空"
             return
@@ -264,6 +265,12 @@ Item {
                                 clip: true
                                 color: "#202124"
                                 font.pixelSize: 16
+                                text: root.newCategoryName
+                                onTextChanged: {
+                                    if (root.newCategoryName !== text) {
+                                        root.newCategoryName = text
+                                    }
+                                }
                                 onAccepted: root.submitCategory()
                             }
 
@@ -358,6 +365,12 @@ Item {
                                 clip: true
                                 color: "#202124"
                                 font.pixelSize: 16
+                                text: root.editingCategoryDraftName
+                                onTextChanged: {
+                                    if (root.editingCategoryDraftName !== text) {
+                                        root.editingCategoryDraftName = text
+                                    }
+                                }
                                 onAccepted: root.submitEdit()
                             }
                         }
