@@ -12,6 +12,9 @@ Item {
     property string errorMessage: ""
     property int editingCategoryId: -1
     property string editingCategoryName: ""
+    property int deletingCategoryId: -1
+    property string deletingCategoryName: ""
+    property bool deleteConfirmVisible: false
     readonly property int pageMargin: Math.max(16, Math.min(24, Math.round(width * 0.05)))
     readonly property int bottomInset: Qt.platform.os === "android" ? 72 : pageMargin
 
@@ -23,6 +26,48 @@ Item {
         root.editingCategoryId = -1
         root.editingCategoryName = ""
         editNameInput.text = ""
+    }
+
+    function cancelDelete() {
+        root.deletingCategoryId = -1
+        root.deletingCategoryName = ""
+        root.deleteConfirmVisible = false
+    }
+
+    function requestDelete(categoryId, categoryName, isDefault) {
+        if (isDefault) {
+            root.errorMessage = "默认分类不能删除"
+            return
+        }
+
+        root.errorMessage = ""
+        root.deletingCategoryId = categoryId
+        root.deletingCategoryName = categoryName
+        root.deleteConfirmVisible = true
+    }
+
+    function confirmDelete() {
+        if (root.deletingCategoryId <= 0) {
+            root.cancelDelete()
+            return
+        }
+
+        const result = appController.deleteCategory(root.deletingCategoryId)
+        if (!result.success) {
+            root.errorMessage = result.errorMessage.length > 0
+                    ? result.errorMessage
+                    : "删除分类失败"
+            root.cancelDelete()
+            return
+        }
+
+        if (root.editingCategoryId === root.deletingCategoryId) {
+            root.cancelEdit()
+        }
+
+        root.errorMessage = ""
+        root.cancelDelete()
+        root.refreshCategories()
     }
 
     function startEdit(categoryId, categoryName, isDefault) {
@@ -156,6 +201,8 @@ Item {
                     selected: root.selectedType === value
                     onClicked: function(value) {
                         root.selectedType = value
+                        root.cancelEdit()
+                        root.cancelDelete()
                         root.refreshCategories()
                     }
                 }
@@ -168,6 +215,8 @@ Item {
                     selected: root.selectedType === value
                     onClicked: function(value) {
                         root.selectedType = value
+                        root.cancelEdit()
+                        root.cancelDelete()
                         root.refreshCategories()
                     }
                 }
@@ -383,6 +432,9 @@ Item {
             onEditRequested: function(categoryId, name) {
                 root.startEdit(categoryId, name, Boolean(model.isDefault))
             }
+            onDeleteRequested: function(categoryId, name) {
+                root.requestDelete(categoryId, name, Boolean(model.isDefault))
+            }
         }
 
         footer: Item {
@@ -400,5 +452,111 @@ Item {
         horizontalAlignment: Text.AlignHCenter
         wrapMode: Text.WordWrap
         visible: categoryListView.count === 0
+    }
+
+    Rectangle {
+        anchors.fill: parent
+        z: 10
+        color: "#80000000"
+        visible: root.deleteConfirmVisible
+
+        MouseArea {
+            anchors.fill: parent
+            onClicked: root.cancelDelete()
+        }
+
+        Rectangle {
+            anchors.centerIn: parent
+            width: Math.min(parent.width - root.pageMargin * 2, 320)
+            height: 184
+            radius: 8
+            color: "#ffffff"
+            border.color: "#dadce0"
+
+            MouseArea {
+                anchors.fill: parent
+            }
+
+            Column {
+                anchors.fill: parent
+                anchors.margins: 18
+                spacing: 14
+
+                Text {
+                    width: parent.width
+                    text: "确认删除分类"
+                    color: "#202124"
+                    font.pixelSize: 20
+                    font.bold: true
+                    elide: Text.ElideRight
+                }
+
+                Text {
+                    width: parent.width
+                    text: "确定要删除“" + root.deletingCategoryName + "”吗？"
+                    color: "#5f6368"
+                    font.pixelSize: 15
+                    wrapMode: Text.WordWrap
+                }
+
+                Item {
+                    width: parent.width
+                    height: 12
+                }
+
+                Row {
+                    width: parent.width
+                    height: 42
+                    spacing: 10
+
+                    Rectangle {
+                        width: (parent.width - parent.spacing) / 2
+                        height: parent.height
+                        radius: 8
+                        color: cancelDeleteMouseArea.pressed ? "#f1f3f4" : "#ffffff"
+                        border.color: "#dadce0"
+
+                        Text {
+                            anchors.centerIn: parent
+                            text: "取消"
+                            color: "#3c4043"
+                            font.pixelSize: 16
+                            font.bold: true
+                        }
+
+                        MouseArea {
+                            id: cancelDeleteMouseArea
+
+                            anchors.fill: parent
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: root.cancelDelete()
+                        }
+                    }
+
+                    Rectangle {
+                        width: (parent.width - parent.spacing) / 2
+                        height: parent.height
+                        radius: 8
+                        color: confirmDeleteMouseArea.pressed ? "#a50e0e" : "#d93025"
+
+                        Text {
+                            anchors.centerIn: parent
+                            text: "删除"
+                            color: "#ffffff"
+                            font.pixelSize: 16
+                            font.bold: true
+                        }
+
+                        MouseArea {
+                            id: confirmDeleteMouseArea
+
+                            anchors.fill: parent
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: root.confirmDelete()
+                        }
+                    }
+                }
+            }
+        }
     }
 }
