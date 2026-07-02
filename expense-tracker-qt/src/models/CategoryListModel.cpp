@@ -62,6 +62,7 @@ void CategoryListModel::refresh(const QString &type)
     bool typeOk = false;
     const TransactionType transactionType = Transaction::typeFromString(type, &typeOk);
     if (!typeOk) {
+        m_hasCurrentType = false;
         setCategories({});
         return;
     }
@@ -71,12 +72,24 @@ void CategoryListModel::refresh(const QString &type)
 
 void CategoryListModel::refresh(TransactionType type)
 {
+    m_currentType = type;
+    m_hasCurrentType = true;
+
     if (!m_categoryRepository) {
         setCategories({});
         return;
     }
 
     setCategories(m_categoryRepository->getCategoriesByType(type));
+}
+
+void CategoryListModel::refreshCurrent()
+{
+    if (!m_hasCurrentType) {
+        return;
+    }
+
+    refresh(m_currentType);
 }
 
 void CategoryListModel::setCategoryRepository(CategoryRepository *categoryRepository)

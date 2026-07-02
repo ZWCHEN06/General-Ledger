@@ -1,6 +1,8 @@
 #include "src/AppController.h"
 #include "src/database/DatabaseManager.h"
+#include "src/models/CategoryListModel.h"
 #include "src/models/TransactionListModel.h"
+#include "src/repositories/CategoryRepository.h"
 #include "src/repositories/TransactionRepository.h"
 
 #include <QDebug>
@@ -40,13 +42,18 @@ int main(int argc, char *argv[])
 
     QQmlApplicationEngine engine;
     TransactionRepository transactionRepository(databaseManager.database());
+    CategoryRepository categoryRepository(databaseManager.database());
     AppController appController(&transactionRepository);
     appController.setDatabaseStatus(databaseReady, databaseErrorMessage);
 
     TransactionListModel transactionListModel(&transactionRepository);
+    CategoryListModel categoryListModel(&categoryRepository);
     appController.setTransactionListModel(&transactionListModel);
+    appController.setCategoryRepository(&categoryRepository);
+    appController.setCategoryListModel(&categoryListModel);
     engine.rootContext()->setContextProperty(QStringLiteral("appController"), &appController);
     engine.rootContext()->setContextProperty(QStringLiteral("transactionListModel"), &transactionListModel);
+    engine.rootContext()->setContextProperty(QStringLiteral("categoryListModel"), &categoryListModel);
 
     QObject::connect(
         &engine,

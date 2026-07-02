@@ -7,6 +7,8 @@
 #include <QVariant>
 #include <QVariantMap>
 
+class CategoryListModel;
+class CategoryRepository;
 class TransactionListModel;
 class TransactionRepository;
 
@@ -53,8 +55,14 @@ public:
     Q_INVOKABLE QVariantMap clearTransactionFilter();
     Q_INVOKABLE QVariantMap currentTransactionFilter() const;
     Q_INVOKABLE QVariantMap refreshTransactionList();
+    Q_INVOKABLE QVariantMap refreshCategories(const QString &type);
+    Q_INVOKABLE QVariantMap addCategory(const QString &name, const QString &type);
+    Q_INVOKABLE QVariantMap updateCategory(int id, const QString &name);
+    Q_INVOKABLE QVariantMap deleteCategory(int id);
 
     void setTransactionListModel(TransactionListModel *transactionListModel);
+    void setCategoryRepository(CategoryRepository *categoryRepository);
+    void setCategoryListModel(CategoryListModel *categoryListModel);
 
 signals:
     void databaseStatusChanged();
@@ -65,6 +73,8 @@ private:
 
     TransactionRepository *m_transactionRepository = nullptr;
     TransactionListModel *m_transactionListModel = nullptr;
+    CategoryRepository *m_categoryRepository = nullptr;
+    CategoryListModel *m_categoryListModel = nullptr;
     TransactionFilter m_transactionFilter;
     bool m_transactionFilterActive = false;
     bool m_databaseReady = true;

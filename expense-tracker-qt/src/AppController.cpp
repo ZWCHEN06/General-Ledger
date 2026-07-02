@@ -1,8 +1,10 @@
 #include "AppController.h"
 
+#include "models/CategoryListModel.h"
 #include "models/Transaction.h"
 #include "models/TransactionFilter.h"
 #include "models/TransactionListModel.h"
+#include "repositories/CategoryRepository.h"
 #include "repositories/TransactionRepository.h"
 #include "services/CategorySummaryService.h"
 #include "services/CsvExportService.h"
@@ -34,6 +36,15 @@ QVariantMap successResult(bool filterActive = false)
         {QStringLiteral("success"), true},
         {QStringLiteral("errorMessage"), QString()},
         {QStringLiteral("filterActive"), filterActive}
+    };
+}
+
+QVariantMap categoryRepositoryResultToMap(const CategoryRepositoryResult &result)
+{
+    return QVariantMap {
+        {QStringLiteral("success"), result.success},
+        {QStringLiteral("errorMessage"), result.errorMessage},
+        {QStringLiteral("id"), result.id}
     };
 }
 
@@ -158,6 +169,23 @@ bool parseOptionalTransactionType(const QString &type, TransactionFilter *filter
     return true;
 }
 
+bool parseRequiredCategoryType(const QString &type, TransactionType *output, QString *errorMessage)
+{
+    bool typeOk = false;
+    const TransactionType transactionType = Transaction::typeFromString(type, &typeOk);
+    if (!typeOk) {
+        if (errorMessage) {
+            *errorMessage = QStringLiteral("分类类型必须是 income 或 expense");
+        }
+        return false;
+    }
+
+    if (output) {
+        *output = transactionType;
+    }
+    return true;
+}
+
 QString optionalDoubleToString(const std::optional<double> &value)
 {
     if (!value.has_value()) {
@@ -209,6 +237,16 @@ void AppController::setDatabaseStatus(bool ready, const QString &errorMessage)
 void AppController::setTransactionListModel(TransactionListModel *transactionListModel)
 {
     m_transactionListModel = transactionListModel;
+}
+
+void AppController::setCategoryRepository(CategoryRepository *categoryRepository)
+{
+    m_categoryRepository = categoryRepository;
+}
+
+void AppController::setCategoryListModel(CategoryListModel *categoryListModel)
+{
+    m_categoryListModel = categoryListModel;
 }
 
 QString AppController::effectiveDatabaseErrorMessage() const
@@ -637,4 +675,100 @@ QVariantMap AppController::refreshTransactionList()
     }
 
     return successResult(m_transactionFilterActive);
+}
+
+QVariantMap AppController::refreshCategories(const QString &type)
+{
+    if (!m_databaseReady) {
+        return failureResult(effectiveDatabaseErrorMessage());
+    }
+
+    if (!m_categoryListModel) {
+        return failureResult(QStringLiteral("分类列表模型未初始化"));
+    }
+
+    TransactionType categoryType = TransactionType::Expense;
+    QString validationError;
+    if (!parseRequiredCategoryType(type, &categoryType, &validationError)) {
+        return failureResult(validationError);
+    }
+
+    m_categoryListModel->refresh(categoryType);
+    return QVariantMap {
+        {QStringLiteral("success"), true},
+        {QStringLiteral("errorMessage"), QString()},
+        {QStringLiteral("id"), -1}
+    };
+}
+
+QVariantMap AppController::addCategory(const QString &name, const QString &type)
+{
+    if (!m_databaseReady) {
+        return failureResult(effectiveDatabaseErrorMessage());
+    }
+
+    if (!m_categoryRepository) {
+        return failureResult(QStringLiteral("分类仓库未初始化"));
+    }
+
+    if (!m_categoryListModel) {
+        return failureResult(QStringLiteral("分类列表模型未初始化"));
+    }
+
+    TransactionType categoryType = TransactionType::Expense;
+    QString validationError;
+    if (!parseRequiredCategoryType(type, &categoryType, &validationError)) {
+        return failureResult(validationError);
+    }
+
+    const CategoryRepositoryResult result = m_categoryRepository->addCategory(name, categoryType);
+    if (result.success) {
+        m_categoryListModel->refresh(categoryType);
+    }
+
+    return categoryRepositoryResultToMap(result);
+}
+
+QVariantMap AppController::updateCategory(int id, const QString &name)
+{
+    if (!m_databaseReady) {
+        return failureResult(effectiveDatabaseErrorMessage());
+    }
+
+    if (!m_categoryRepository) {
+        return failureResult(QStringLiteral("分类仓库未初始化"));
+    }
+
+    if (!m_categoryListModel) {
+        return failureResult(QStringLiteral("分类列表模型未初始化"));
+    }
+
+    const CategoryRepositoryResult result = m_categoryRepository->updateCategoryName(id, name);
+    if (result.success) {
+        m_categoryListModel->refreshCurrent();
+    }
+
+    return categoryRepositoryResultToMap(result);
+}
+
+QVariantMap AppController::deleteCategory(int id)
+{
+    if (!m_databaseReady) {
+        return failureResult(effectiveDatabaseErrorMessage());
+    }
+
+    if (!m_categoryRepository) {
+        return failureResult(QStringLiteral("分类仓库未初始化"));
+    }
+
+    if (!m_categoryListModel) {
+        return failureResult(QStringLiteral("分类列表模型未初始化"));
+    }
+
+    const CategoryRepositoryResult result = m_categoryRepository->deleteCategory(id);
+    if (result.success) {
+        m_categoryListModel->refreshCurrent();
+    }
+
+    return categoryRepositoryResultToMap(result);
 }

@@ -30,6 +30,7 @@ public:
 
     Q_INVOKABLE void refresh(const QString &type);
     void refresh(TransactionType type);
+    void refreshCurrent();
 
     void setCategoryRepository(CategoryRepository *categoryRepository);
     void setCategories(const QList<Category> &categories);
@@ -37,4 +38,6 @@ public:
 private:
     CategoryRepository *m_categoryRepository = nullptr;
     QList<Category> m_categories;
+    TransactionType m_currentType = TransactionType::Expense;
+    bool m_hasCurrentType = false;
 };
