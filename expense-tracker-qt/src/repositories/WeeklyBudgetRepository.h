@@ -20,6 +20,7 @@ public:
 
     QList<WeeklyBudget> getBudgetsByWeek(const QString &weekStartDate);
     WeeklyBudgetRepositoryResult upsertBudget(const QString &weekStartDate, int categoryId, double amount);
+    WeeklyBudgetRepositoryResult deleteBudget(const QString &weekStartDate, int categoryId);
 
 private:
     QSqlDatabase m_database;

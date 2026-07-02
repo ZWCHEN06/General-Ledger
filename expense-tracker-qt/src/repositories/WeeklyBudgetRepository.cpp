@@ -177,3 +177,58 @@ WeeklyBudgetRepositoryResult WeeklyBudgetRepository::upsertBudget(const QString 
         QString()
     };
 }
+
+WeeklyBudgetRepositoryResult WeeklyBudgetRepository::deleteBudget(const QString &weekStartDate, int categoryId)
+{
+    const QString trimmedWeekStartDate = weekStartDate.trimmed();
+    const QDate parsedWeekStartDate = WeekUtils::parseDate(trimmedWeekStartDate);
+    if (!parsedWeekStartDate.isValid() || !WeekUtils::isWeekStartDate(parsedWeekStartDate)) {
+        return WeeklyBudgetRepositoryResult {
+            false,
+            0,
+            QStringLiteral("周开始日期必须是合法的周一日期，格式为 YYYY-MM-DD")
+        };
+    }
+
+    if (categoryId <= 0) {
+        return WeeklyBudgetRepositoryResult {
+            false,
+            0,
+            QStringLiteral("分类 id 必须大于 0")
+        };
+    }
+
+    if (!m_database.isOpen()) {
+        return WeeklyBudgetRepositoryResult {
+            false,
+            0,
+            QStringLiteral("数据库未打开，无法删除每周预算")
+        };
+    }
+
+    QSqlQuery deleteQuery(m_database);
+    if (!deleteQuery.prepare(QStringLiteral(R"(
+        DELETE FROM weekly_budgets
+        WHERE week_start_date = :week_start_date
+          AND category_id = :category_id
+    )"))) {
+        const QString error = QStringLiteral("删除每周预算失败：SQL 准备失败：%1").arg(deleteQuery.lastError().text());
+        qWarning().noquote() << error;
+        return WeeklyBudgetRepositoryResult {false, 0, error};
+    }
+
+    deleteQuery.bindValue(QStringLiteral(":week_start_date"), trimmedWeekStartDate);
+    deleteQuery.bindValue(QStringLiteral(":category_id"), categoryId);
+
+    if (!deleteQuery.exec()) {
+        const QString error = QStringLiteral("删除每周预算失败：SQL 执行失败：%1").arg(deleteQuery.lastError().text());
+        qWarning().noquote() << error;
+        return WeeklyBudgetRepositoryResult {false, 0, error};
+    }
+
+    return WeeklyBudgetRepositoryResult {
+        true,
+        0,
+        QString()
+    };
+}
