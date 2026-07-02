@@ -30,6 +30,8 @@ qt_add_executable(expense-tracker-qt
     src/models/WeeklyBudget.h
     src/models/WeeklyBudgetComparison.cpp
     src/models/WeeklyBudgetComparison.h
+    src/models/WeeklyBudgetListModel.cpp
+    src/models/WeeklyBudgetListModel.h
     src/repositories/CategoryRepository.cpp
     src/repositories/CategoryRepository.h
     src/repositories/TransactionRepository.cpp
