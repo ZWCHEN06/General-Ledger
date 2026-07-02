@@ -147,21 +147,23 @@ Item {
 
                     delegate: CategoryOption {
                         required property int index
+                        required property int categoryId
+                        required property string name
 
                         width: (categoryGrid.width - categoryGrid.columnSpacing) / 2
                         height: 44
-                        label: String(model.name)
-                        selected: root.selectedCategoryId === Number(model.id)
+                        label: name
+                        selected: root.selectedCategoryId === categoryId
 
                         Component.onCompleted: {
                             if (index === 0 && root.selectedCategoryId <= 0) {
-                                root.selectedCategoryId = Number(model.id)
-                                root.selectedCategoryName = String(model.name)
+                                root.selectedCategoryId = categoryId
+                                root.selectedCategoryName = name
                             }
                         }
 
                         onClicked: function(categoryName) {
-                            root.selectedCategoryId = Number(model.id)
+                            root.selectedCategoryId = categoryId
                             root.selectedCategoryName = categoryName
                             root.errorMessage = ""
                         }

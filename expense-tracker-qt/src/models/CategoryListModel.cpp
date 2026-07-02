@@ -32,6 +32,7 @@ QVariant CategoryListModel::data(const QModelIndex &index, int role) const
 
     switch (role) {
     case IdRole:
+    case CategoryIdRole:
         return category.id();
     case NameRole:
         return category.name();
@@ -50,6 +51,7 @@ QHash<int, QByteArray> CategoryListModel::roleNames() const
 {
     return {
         {IdRole, "id"},
+        {CategoryIdRole, "categoryId"},
         {NameRole, "name"},
         {TypeRole, "type"},
         {IsDefaultRole, "isDefault"},

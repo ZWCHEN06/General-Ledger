@@ -15,6 +15,7 @@ class CategoryListModel : public QAbstractListModel
 public:
     enum Role {
         IdRole = Qt::UserRole + 1,
+        CategoryIdRole,
         NameRole,
         TypeRole,
         IsDefaultRole,
