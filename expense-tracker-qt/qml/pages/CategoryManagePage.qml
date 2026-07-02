@@ -423,15 +423,19 @@ Item {
         }
 
         delegate: CategoryItem {
+            required property int categoryId
+            required property string name
+            required property bool isDefault
+
             width: categoryListView.width
-            name: String(model.name)
-            isDefault: Boolean(model.isDefault)
-            categoryId: Number(model.id)
+            name: name
+            isDefault: isDefault
+            categoryId: categoryId
             onEditRequested: function(categoryId, name) {
-                root.startEdit(categoryId, name, Boolean(model.isDefault))
+                root.startEdit(categoryId, name, isDefault)
             }
             onDeleteRequested: function(categoryId, name) {
-                root.requestDelete(categoryId, name, Boolean(model.isDefault))
+                root.requestDelete(categoryId, name, isDefault)
             }
         }
 
