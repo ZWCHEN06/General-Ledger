@@ -395,6 +395,50 @@ QList<Transaction> TransactionRepository::getTransactionsByMonth(int year, int m
     return transactions;
 }
 
+QHash<int, double> TransactionRepository::getWeeklyExpenseByCategory(const QString &weekStartDate,
+                                                                     const QString &weekEndDate)
+{
+    QHash<int, double> expensesByCategory;
+
+    if (!m_database.isOpen()) {
+        qWarning().noquote() << "按周统计分类支出失败：数据库未打开";
+        return expensesByCategory;
+    }
+
+    QSqlQuery query(m_database);
+    if (!query.prepare(QStringLiteral(R"(
+        SELECT
+            category_id,
+            SUM(amount) AS actual_amount
+        FROM transactions
+        WHERE type = 'expense'
+          AND date >= :weekStartDate
+          AND date <= :weekEndDate
+          AND category_id IS NOT NULL
+        GROUP BY category_id
+    )"))) {
+        qWarning().noquote() << "按周统计分类支出失败：SQL 准备失败:" << query.lastError().text();
+        return expensesByCategory;
+    }
+
+    query.bindValue(QStringLiteral(":weekStartDate"), weekStartDate);
+    query.bindValue(QStringLiteral(":weekEndDate"), weekEndDate);
+
+    if (!query.exec()) {
+        qWarning().noquote() << "按周统计分类支出失败：SQL 执行失败:" << query.lastError().text();
+        return expensesByCategory;
+    }
+
+    while (query.next()) {
+        expensesByCategory.insert(
+            query.value(QStringLiteral("category_id")).toInt(),
+            query.value(QStringLiteral("actual_amount")).toDouble());
+    }
+
+    // 旧账单如果 category_id 为空，本阶段暂不纳入每周分类预算统计。
+    return expensesByCategory;
+}
+
 std::optional<Transaction> TransactionRepository::getTransactionById(int id)
 {
     if (!m_database.isOpen()) {
