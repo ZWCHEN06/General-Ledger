@@ -6,9 +6,67 @@
 #include <QSqlQuery>
 #include <QVariant>
 
+namespace {
+Category categoryFromCurrentRow(const QSqlQuery &query)
+{
+    bool typeOk = false;
+    const TransactionType type = Transaction::typeFromString(query.value(QStringLiteral("type")).toString(), &typeOk);
+
+    return Category(
+        query.value(QStringLiteral("id")).toInt(),
+        query.value(QStringLiteral("name")).toString(),
+        typeOk ? type : TransactionType::Expense,
+        query.value(QStringLiteral("is_default")).toInt() == 1,
+        query.value(QStringLiteral("sort_order")).toInt(),
+        query.value(QStringLiteral("created_at")).toString(),
+        query.value(QStringLiteral("updated_at")).toString());
+}
+}
+
 CategoryRepository::CategoryRepository(const QSqlDatabase &database)
     : m_database(database)
 {
+}
+
+QList<Category> CategoryRepository::getCategoriesByType(TransactionType type)
+{
+    QList<Category> categories;
+
+    if (!m_database.isOpen()) {
+        qWarning().noquote() << "查询分类失败：数据库未打开";
+        return categories;
+    }
+
+    QSqlQuery query(m_database);
+    if (!query.prepare(QStringLiteral(R"(
+        SELECT
+            id,
+            name,
+            type,
+            is_default,
+            sort_order,
+            created_at,
+            updated_at
+        FROM categories
+        WHERE type = :type
+        ORDER BY sort_order ASC, id ASC
+    )"))) {
+        qWarning().noquote() << "查询分类失败：SQL 准备失败:" << query.lastError().text();
+        return categories;
+    }
+
+    query.bindValue(QStringLiteral(":type"), Transaction::typeToString(type));
+
+    if (!query.exec()) {
+        qWarning().noquote() << "查询分类失败：SQL 执行失败:" << query.lastError().text();
+        return categories;
+    }
+
+    while (query.next()) {
+        categories.append(categoryFromCurrentRow(query));
+    }
+
+    return categories;
 }
 
 CategoryRepositoryResult CategoryRepository::addCategory(const QString &name, TransactionType type)

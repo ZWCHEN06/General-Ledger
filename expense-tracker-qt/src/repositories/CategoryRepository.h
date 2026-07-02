@@ -1,7 +1,9 @@
 #pragma once
 
+#include "../models/Category.h"
 #include "../models/Transaction.h"
 
+#include <QList>
 #include <QSqlDatabase>
 #include <QString>
 
@@ -17,6 +19,7 @@ class CategoryRepository
 public:
     explicit CategoryRepository(const QSqlDatabase &database);
 
+    QList<Category> getCategoriesByType(TransactionType type);
     CategoryRepositoryResult addCategory(const QString &name, TransactionType type);
     CategoryRepositoryResult updateCategoryName(int id, const QString &name);
     CategoryRepositoryResult deleteCategory(int id);
