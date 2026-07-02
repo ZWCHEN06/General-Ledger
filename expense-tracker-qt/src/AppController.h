@@ -48,6 +48,13 @@ public:
                                               const QString &category,
                                               const QString &date,
                                               const QString &note);
+    Q_INVOKABLE QVariantMap updateTransaction(int id,
+                                              const QString &type,
+                                              const QString &amount,
+                                              const QString &category,
+                                              const QString &date,
+                                              const QString &note,
+                                              const QVariant &categoryId);
     Q_INVOKABLE QVariantMap deleteTransaction(int id);
     Q_INVOKABLE QVariantMap exportCsv() const;
     Q_INVOKABLE QVariantMap currentMonthCategorySummary() const;

@@ -402,6 +402,17 @@ QVariantMap AppController::updateTransaction(int id,
                                              const QString &date,
                                              const QString &note)
 {
+    return updateTransaction(id, type, amount, category, date, note, QVariant());
+}
+
+QVariantMap AppController::updateTransaction(int id,
+                                             const QString &type,
+                                             const QString &amount,
+                                             const QString &category,
+                                             const QString &date,
+                                             const QString &note,
+                                             const QVariant &categoryId)
+{
     if (!m_databaseReady) {
         return failureResult(effectiveDatabaseErrorMessage());
     }
@@ -422,6 +433,31 @@ QVariantMap AppController::updateTransaction(int id,
         return failureResult(QStringLiteral("金额格式不正确"));
     }
 
+    std::optional<int> parsedCategoryId;
+    QString categoryIdError;
+    if (!parseOptionalCategoryId(categoryId, &parsedCategoryId, &categoryIdError)) {
+        return failureResult(categoryIdError);
+    }
+
+    if (parsedCategoryId.has_value()) {
+        if (!m_categoryRepository) {
+            return failureResult(QStringLiteral("分类仓库未初始化"));
+        }
+
+        bool categoryExists = false;
+        const QList<Category> categories = m_categoryRepository->getCategoriesByType(transactionType);
+        for (const Category &existingCategory : categories) {
+            if (existingCategory.id() == parsedCategoryId.value()) {
+                categoryExists = true;
+                break;
+            }
+        }
+
+        if (!categoryExists) {
+            return failureResult(QStringLiteral("分类ID无效"));
+        }
+    }
+
     Transaction transaction(
         id,
         transactionType,
@@ -430,7 +466,8 @@ QVariantMap AppController::updateTransaction(int id,
         date.trimmed(),
         note.trimmed(),
         QString(),
-        QString());
+        QString(),
+        parsedCategoryId);
 
     QString validationError;
     if (!transaction.validate(&validationError)) {

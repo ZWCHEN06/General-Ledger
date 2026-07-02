@@ -443,6 +443,7 @@ bool TransactionRepository::updateTransaction(const Transaction &transaction)
             type = :type,
             amount = :amount,
             category = :category,
+            category_id = :category_id,
             date = :date,
             note = :note,
             updated_at = :updated_at
@@ -458,6 +459,10 @@ bool TransactionRepository::updateTransaction(const Transaction &transaction)
     query.bindValue(QStringLiteral(":type"), Transaction::typeToString(transaction.type()));
     query.bindValue(QStringLiteral(":amount"), transaction.amount());
     query.bindValue(QStringLiteral(":category"), transaction.category());
+    query.bindValue(QStringLiteral(":category_id"),
+                    transaction.categoryId().has_value()
+                        ? QVariant(transaction.categoryId().value())
+                        : QVariant());
     query.bindValue(QStringLiteral(":date"), transaction.date());
     query.bindValue(QStringLiteral(":note"), transaction.note());
     query.bindValue(QStringLiteral(":updated_at"), QDateTime::currentDateTime().toString(Qt::ISODate));
