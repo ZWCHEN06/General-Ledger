@@ -10,11 +10,32 @@ Item {
 
     property string selectedType: "expense"
     property string errorMessage: ""
+    property int editingCategoryId: -1
+    property string editingCategoryName: ""
     readonly property int pageMargin: Math.max(16, Math.min(24, Math.round(width * 0.05)))
     readonly property int bottomInset: Qt.platform.os === "android" ? 72 : pageMargin
 
     function refreshCategories() {
         categoryListModel.refresh(root.selectedType)
+    }
+
+    function cancelEdit() {
+        root.editingCategoryId = -1
+        root.editingCategoryName = ""
+        editNameInput.text = ""
+    }
+
+    function startEdit(categoryId, categoryName, isDefault) {
+        if (isDefault) {
+            root.errorMessage = "默认分类不能改名"
+            return
+        }
+
+        root.errorMessage = ""
+        root.editingCategoryId = categoryId
+        root.editingCategoryName = categoryName
+        editNameInput.text = categoryName
+        editNameInput.forceActiveFocus()
     }
 
     function submitCategory() {
@@ -34,6 +55,30 @@ Item {
 
         root.errorMessage = ""
         categoryNameInput.text = ""
+        root.refreshCategories()
+    }
+
+    function submitEdit() {
+        if (root.editingCategoryId <= 0) {
+            return
+        }
+
+        const categoryName = editNameInput.text.trim()
+        if (categoryName.length === 0) {
+            root.errorMessage = "分类名称不能为空"
+            return
+        }
+
+        const result = appController.updateCategory(root.editingCategoryId, categoryName)
+        if (!result.success) {
+            root.errorMessage = result.errorMessage.length > 0
+                    ? result.errorMessage
+                    : "更新分类失败"
+            return
+        }
+
+        root.errorMessage = ""
+        root.cancelEdit()
         root.refreshCategories()
     }
 
@@ -222,6 +267,108 @@ Item {
                 }
             }
 
+            Rectangle {
+                width: parent.width
+                height: root.editingCategoryId > 0 ? 108 : 0
+                radius: 8
+                color: "#ffffff"
+                border.color: "#dadce0"
+                visible: root.editingCategoryId > 0
+
+                Column {
+                    anchors.fill: parent
+                    anchors.margins: 12
+                    spacing: 10
+
+                    Text {
+                        width: parent.width
+                        text: "编辑分类"
+                        color: "#202124"
+                        font.pixelSize: 16
+                        font.bold: true
+                    }
+
+                    Row {
+                        width: parent.width
+                        height: 44
+                        spacing: 10
+
+                        Rectangle {
+                            width: parent.width - saveEditButton.width - cancelEditButton.width - parent.spacing * 2
+                            height: parent.height
+                            radius: 8
+                            color: "#ffffff"
+                            border.color: editNameInput.activeFocus ? "#1a73e8" : "#dadce0"
+
+                            TextInput {
+                                id: editNameInput
+
+                                anchors.fill: parent
+                                anchors.leftMargin: 12
+                                anchors.rightMargin: 12
+                                verticalAlignment: TextInput.AlignVCenter
+                                clip: true
+                                color: "#202124"
+                                font.pixelSize: 16
+                                singleLine: true
+                                onAccepted: root.submitEdit()
+                            }
+                        }
+
+                        Rectangle {
+                            id: saveEditButton
+
+                            width: 64
+                            height: parent.height
+                            radius: 8
+                            color: saveEditMouseArea.pressed ? "#185abc" : "#1a73e8"
+
+                            Text {
+                                anchors.centerIn: parent
+                                text: "保存"
+                                color: "#ffffff"
+                                font.pixelSize: 16
+                                font.bold: true
+                            }
+
+                            MouseArea {
+                                id: saveEditMouseArea
+
+                                anchors.fill: parent
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: root.submitEdit()
+                            }
+                        }
+
+                        Rectangle {
+                            id: cancelEditButton
+
+                            width: 64
+                            height: parent.height
+                            radius: 8
+                            color: cancelEditMouseArea.pressed ? "#f1f3f4" : "#ffffff"
+                            border.color: "#dadce0"
+
+                            Text {
+                                anchors.centerIn: parent
+                                text: "取消"
+                                color: "#3c4043"
+                                font.pixelSize: 16
+                                font.bold: true
+                            }
+
+                            MouseArea {
+                                id: cancelEditMouseArea
+
+                                anchors.fill: parent
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: root.cancelEdit()
+                            }
+                        }
+                    }
+                }
+            }
+
             Item {
                 width: parent.width
                 height: 2
@@ -233,6 +380,9 @@ Item {
             name: String(model.name)
             isDefault: Boolean(model.isDefault)
             categoryId: Number(model.id)
+            onEditRequested: function(categoryId, name) {
+                root.startEdit(categoryId, name, Boolean(model.isDefault))
+            }
         }
 
         footer: Item {

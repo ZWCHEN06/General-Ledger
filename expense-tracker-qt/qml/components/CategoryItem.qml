@@ -54,6 +54,7 @@ Rectangle {
                 width: 56
                 height: 32
                 radius: 6
+                visible: !categoryItem.isDefault
                 color: editArea.pressed ? "#d2e3fc" : "#e8f0fe"
                 border.color: "#1a73e8"
 
