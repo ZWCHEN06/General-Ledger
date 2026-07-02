@@ -144,3 +144,140 @@ CategoryRepositoryResult CategoryRepository::addCategory(const QString &name, Tr
         QString()
     };
 }
+
+CategoryRepositoryResult CategoryRepository::updateCategoryName(int id, const QString &name)
+{
+    if (id <= 0) {
+        return CategoryRepositoryResult {
+            false,
+            0,
+            QStringLiteral("分类 id 不正确")
+        };
+    }
+
+    const QString trimmedName = name.trimmed();
+    if (trimmedName.isEmpty()) {
+        return CategoryRepositoryResult {
+            false,
+            0,
+            QStringLiteral("分类名称不能为空")
+        };
+    }
+
+    if (!m_database.isOpen()) {
+        return CategoryRepositoryResult {
+            false,
+            0,
+            QStringLiteral("数据库未打开，无法修改分类")
+        };
+    }
+
+    QSqlQuery categoryQuery(m_database);
+    if (!categoryQuery.prepare(QStringLiteral(R"(
+        SELECT
+            type,
+            is_default
+        FROM categories
+        WHERE id = :id
+        LIMIT 1
+    )"))) {
+        const QString error = QStringLiteral("查询分类失败：%1").arg(categoryQuery.lastError().text());
+        qWarning().noquote() << error;
+        return CategoryRepositoryResult {false, 0, error};
+    }
+
+    categoryQuery.bindValue(QStringLiteral(":id"), id);
+
+    if (!categoryQuery.exec()) {
+        const QString error = QStringLiteral("查询分类失败：%1").arg(categoryQuery.lastError().text());
+        qWarning().noquote() << error;
+        return CategoryRepositoryResult {false, 0, error};
+    }
+
+    if (!categoryQuery.next()) {
+        return CategoryRepositoryResult {
+            false,
+            0,
+            QStringLiteral("分类不存在")
+        };
+    }
+
+    const QString typeText = categoryQuery.value(QStringLiteral("type")).toString();
+    const bool isDefault = categoryQuery.value(QStringLiteral("is_default")).toInt() == 1;
+    if (isDefault) {
+        return CategoryRepositoryResult {
+            false,
+            0,
+            QStringLiteral("默认分类不能改名")
+        };
+    }
+
+    QSqlQuery duplicateQuery(m_database);
+    if (!duplicateQuery.prepare(QStringLiteral(R"(
+        SELECT id
+        FROM categories
+        WHERE name = :name
+          AND type = :type
+          AND id <> :id
+        LIMIT 1
+    )"))) {
+        const QString error = QStringLiteral("检查分类重名失败：%1").arg(duplicateQuery.lastError().text());
+        qWarning().noquote() << error;
+        return CategoryRepositoryResult {false, 0, error};
+    }
+
+    duplicateQuery.bindValue(QStringLiteral(":name"), trimmedName);
+    duplicateQuery.bindValue(QStringLiteral(":type"), typeText);
+    duplicateQuery.bindValue(QStringLiteral(":id"), id);
+
+    if (!duplicateQuery.exec()) {
+        const QString error = QStringLiteral("检查分类重名失败：%1").arg(duplicateQuery.lastError().text());
+        qWarning().noquote() << error;
+        return CategoryRepositoryResult {false, 0, error};
+    }
+
+    if (duplicateQuery.next()) {
+        return CategoryRepositoryResult {
+            false,
+            0,
+            QStringLiteral("同一类型下分类名称不能重复")
+        };
+    }
+
+    QSqlQuery updateQuery(m_database);
+    if (!updateQuery.prepare(QStringLiteral(R"(
+        UPDATE categories
+        SET
+            name = :name,
+            updated_at = :updated_at
+        WHERE id = :id
+    )"))) {
+        const QString error = QStringLiteral("修改分类名称失败：%1").arg(updateQuery.lastError().text());
+        qWarning().noquote() << error;
+        return CategoryRepositoryResult {false, 0, error};
+    }
+
+    updateQuery.bindValue(QStringLiteral(":name"), trimmedName);
+    updateQuery.bindValue(QStringLiteral(":updated_at"), QDateTime::currentDateTime().toString(Qt::ISODate));
+    updateQuery.bindValue(QStringLiteral(":id"), id);
+
+    if (!updateQuery.exec()) {
+        const QString error = QStringLiteral("修改分类名称失败：%1").arg(updateQuery.lastError().text());
+        qWarning().noquote() << error;
+        return CategoryRepositoryResult {false, 0, error};
+    }
+
+    if (updateQuery.numRowsAffected() <= 0) {
+        return CategoryRepositoryResult {
+            false,
+            0,
+            QStringLiteral("分类不存在")
+        };
+    }
+
+    return CategoryRepositoryResult {
+        true,
+        id,
+        QString()
+    };
+}

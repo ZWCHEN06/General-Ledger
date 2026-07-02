@@ -18,6 +18,7 @@ public:
     explicit CategoryRepository(const QSqlDatabase &database);
 
     CategoryRepositoryResult addCategory(const QString &name, TransactionType type);
+    CategoryRepositoryResult updateCategoryName(int id, const QString &name);
 
 private:
     QSqlDatabase m_database;
