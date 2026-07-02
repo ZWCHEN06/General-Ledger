@@ -9,11 +9,32 @@ Item {
     signal backRequested()
 
     property string selectedType: "expense"
+    property string errorMessage: ""
     readonly property int pageMargin: Math.max(16, Math.min(24, Math.round(width * 0.05)))
     readonly property int bottomInset: Qt.platform.os === "android" ? 72 : pageMargin
 
     function refreshCategories() {
         categoryListModel.refresh(root.selectedType)
+    }
+
+    function submitCategory() {
+        const categoryName = categoryNameInput.text.trim()
+        if (categoryName.length === 0) {
+            root.errorMessage = "分类名称不能为空"
+            return
+        }
+
+        const result = appController.addCategory(categoryName, root.selectedType)
+        if (!result.success) {
+            root.errorMessage = result.errorMessage.length > 0
+                    ? result.errorMessage
+                    : "新增分类失败"
+            return
+        }
+
+        root.errorMessage = ""
+        categoryNameInput.text = ""
+        root.refreshCategories()
     }
 
     Component.onCompleted: refreshCategories()
@@ -109,7 +130,7 @@ Item {
 
             Rectangle {
                 width: parent.width
-                height: 108
+                height: root.errorMessage.length > 0 ? 136 : 108
                 radius: 8
                 color: "#ffffff"
                 border.color: "#dadce0"
@@ -150,6 +171,7 @@ Item {
                                 color: "#202124"
                                 font.pixelSize: 16
                                 singleLine: true
+                                onAccepted: root.submitCategory()
                             }
 
                             Text {
@@ -184,8 +206,18 @@ Item {
 
                                 anchors.fill: parent
                                 cursorShape: Qt.PointingHandCursor
+                                onClicked: root.submitCategory()
                             }
                         }
+                    }
+
+                    Text {
+                        width: parent.width
+                        text: root.errorMessage
+                        color: "#b3261e"
+                        font.pixelSize: 14
+                        wrapMode: Text.WordWrap
+                        visible: root.errorMessage.length > 0
                     }
                 }
             }
