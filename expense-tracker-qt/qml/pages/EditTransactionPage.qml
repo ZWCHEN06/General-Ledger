@@ -12,18 +12,51 @@ Item {
     required property int transactionId
 
     property string transactionType: "expense"
-    property string selectedCategory: "餐饮"
+    property int selectedCategoryId: -1
+    property string selectedCategoryName: ""
+    property int pendingCategoryId: -1
+    property string pendingCategoryName: ""
+    property bool categorySelectionResolved: false
     property string errorMessage: ""
     property bool confirmDeleteVisible: false
     readonly property int pageMargin: Math.max(16, Math.min(24, Math.round(width * 0.05)))
     readonly property int bottomInset: Qt.platform.os === "android" ? 96 : pageMargin
     readonly property int actionHeight: 52
 
-    readonly property var expenseCategories: ["餐饮", "交通", "购物", "娱乐"]
-    readonly property var incomeCategories: ["工资", "奖金", "兼职", "其他"]
+    function refreshCategoriesForCurrentType(resetSelection) {
+        if (resetSelection) {
+            selectedCategoryId = -1
+            selectedCategoryName = ""
+            pendingCategoryId = -1
+            pendingCategoryName = ""
+        }
 
-    function currentCategories() {
-        return transactionType === "income" ? incomeCategories : expenseCategories
+        categorySelectionResolved = false
+        categoryListModel.refresh(transactionType)
+    }
+
+    function applyCategoryCandidate(categoryId, categoryName, index) {
+        if (categorySelectionResolved) {
+            return
+        }
+
+        if (pendingCategoryId > 0 && categoryId === pendingCategoryId) {
+            selectedCategoryId = categoryId
+            selectedCategoryName = categoryName
+            categorySelectionResolved = true
+            return
+        }
+
+        if (pendingCategoryName.length > 0 && categoryName === pendingCategoryName) {
+            selectedCategoryId = categoryId
+            selectedCategoryName = categoryName
+            return
+        }
+
+        if (index === 0 && selectedCategoryId <= 0) {
+            selectedCategoryId = categoryId
+            selectedCategoryName = categoryName
+        }
     }
 
     function loadTransaction() {
@@ -35,20 +68,30 @@ Item {
 
         errorMessage = ""
         transactionType = result.type
-        selectedCategory = result.category
+        pendingCategoryId = Number(result.categoryId || -1)
+        pendingCategoryName = result.category || ""
+        selectedCategoryId = -1
+        selectedCategoryName = ""
         amountField.text = result.amount.toFixed(2)
         dateField.text = result.date
         noteField.text = result.note
+        refreshCategoriesForCurrentType(false)
     }
 
     function saveTransaction() {
+        if (selectedCategoryId <= 0 || selectedCategoryName.length === 0) {
+            errorMessage = "请先选择分类"
+            return
+        }
+
         const result = appController.updateTransaction(
             transactionId,
             transactionType,
             amountField.text,
-            selectedCategory,
+            selectedCategoryName,
             dateField.text,
-            noteField.text
+            noteField.text,
+            selectedCategoryId
         )
 
         if (result.success) {
@@ -116,7 +159,8 @@ Item {
                     selected: root.transactionType === value
                     onClicked: function(selectedType) {
                         root.transactionType = selectedType
-                        root.selectedCategory = root.currentCategories()[0]
+                        root.errorMessage = ""
+                        root.refreshCategoriesForCurrentType(true)
                     }
                 }
 
@@ -128,7 +172,8 @@ Item {
                     selected: root.transactionType === value
                     onClicked: function(selectedType) {
                         root.transactionType = selectedType
-                        root.selectedCategory = root.currentCategories()[0]
+                        root.errorMessage = ""
+                        root.refreshCategoriesForCurrentType(true)
                     }
                 }
             }
@@ -159,19 +204,41 @@ Item {
                 rowSpacing: 10
 
                 Repeater {
-                    model: root.currentCategories()
+                    id: categoryRepeater
+
+                    model: categoryListModel
+
                     delegate: CategoryOption {
-                        required property string modelData
+                        required property int index
+                        required property int categoryId
+                        required property string name
 
                         width: (categoryGrid.width - categoryGrid.columnSpacing) / 2
                         height: 44
-                        label: modelData
-                        selected: root.selectedCategory === modelData
+                        label: name
+                        selected: root.selectedCategoryId === categoryId
+
+                        Component.onCompleted: root.applyCategoryCandidate(categoryId, name, index)
+
                         onClicked: function(categoryName) {
-                            root.selectedCategory = categoryName
+                            root.selectedCategoryId = categoryId
+                            root.selectedCategoryName = categoryName
+                            root.pendingCategoryId = -1
+                            root.pendingCategoryName = ""
+                            root.categorySelectionResolved = true
+                            root.errorMessage = ""
                         }
                     }
                 }
+            }
+
+            Text {
+                width: parent.width
+                text: "暂无可用分类，请先在设置中添加分类"
+                color: "#5f6368"
+                font.pixelSize: 15
+                wrapMode: Text.WordWrap
+                visible: categoryRepeater.count === 0
             }
 
             FormField {
@@ -363,5 +430,4 @@ Item {
             }
         }
     }
-
 }
