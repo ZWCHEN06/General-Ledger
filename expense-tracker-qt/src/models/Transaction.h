@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QString>
+#include <optional>
 
 enum class TransactionType {
     Income,
@@ -18,7 +19,8 @@ public:
                 const QString &date,
                 const QString &note,
                 const QString &createdAt,
-                const QString &updatedAt);
+                const QString &updatedAt,
+                std::optional<int> categoryId = std::nullopt);
 
     static QString typeToString(TransactionType type);
     static TransactionType typeFromString(const QString &type,
@@ -39,6 +41,11 @@ public:
     QString category() const;
     void setCategory(const QString &category);
 
+    std::optional<int> categoryId() const;
+    void setCategoryId(std::optional<int> categoryId);
+    void setCategoryId(int categoryId);
+    void clearCategoryId();
+
     QString date() const;
     void setDate(const QString &date);
 
@@ -56,6 +63,7 @@ private:
     TransactionType m_type = TransactionType::Expense;
     double m_amount = 0.0;
     QString m_category;
+    std::optional<int> m_categoryId;
     QString m_date;
     QString m_note;
     QString m_createdAt;
