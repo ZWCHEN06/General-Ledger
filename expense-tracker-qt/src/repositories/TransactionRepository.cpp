@@ -120,6 +120,7 @@ int TransactionRepository::addTransaction(const Transaction &transaction)
             type,
             amount,
             category,
+            category_id,
             date,
             note,
             created_at,
@@ -128,6 +129,7 @@ int TransactionRepository::addTransaction(const Transaction &transaction)
             :type,
             :amount,
             :category,
+            :category_id,
             :date,
             :note,
             :created_at,
@@ -145,6 +147,10 @@ int TransactionRepository::addTransaction(const Transaction &transaction)
     query.bindValue(QStringLiteral(":type"), Transaction::typeToString(transaction.type()));
     query.bindValue(QStringLiteral(":amount"), transaction.amount());
     query.bindValue(QStringLiteral(":category"), transaction.category());
+    query.bindValue(QStringLiteral(":category_id"),
+                    transaction.categoryId().has_value()
+                        ? QVariant(transaction.categoryId().value())
+                        : QVariant());
     query.bindValue(QStringLiteral(":date"), transaction.date());
     query.bindValue(QStringLiteral(":note"), transaction.note());
     query.bindValue(QStringLiteral(":created_at"), now);
