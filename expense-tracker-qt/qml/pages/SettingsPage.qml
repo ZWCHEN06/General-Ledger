@@ -4,6 +4,7 @@ Item {
     id: root
 
     signal backRequested()
+    signal categoryManageRequested()
 
     property string message: ""
     property bool messageIsError: false
@@ -69,6 +70,32 @@ Item {
                     anchors.fill: parent
                     cursorShape: Qt.PointingHandCursor
                     onClicked: root.exportCsv()
+                }
+            }
+
+            Rectangle {
+                id: categoryManageButton
+
+                width: parent.width
+                height: 52
+                radius: 8
+                color: categoryManageMouseArea.pressed ? "#f1f3f4" : "#ffffff"
+                border.color: "#dadce0"
+
+                Text {
+                    anchors.centerIn: parent
+                    text: "分类管理"
+                    color: "#3c4043"
+                    font.pixelSize: 18
+                    font.bold: true
+                }
+
+                MouseArea {
+                    id: categoryManageMouseArea
+
+                    anchors.fill: parent
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: root.categoryManageRequested()
                 }
             }
 

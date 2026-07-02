@@ -58,6 +58,15 @@ Window {
 
         SettingsPage {
             onBackRequested: pageLoader.sourceComponent = homePageComponent
+            onCategoryManageRequested: pageLoader.sourceComponent = categoryManagePageComponent
+        }
+    }
+
+    Component {
+        id: categoryManagePageComponent
+
+        CategoryManagePage {
+            onBackRequested: pageLoader.sourceComponent = settingsPageComponent
         }
     }
 
