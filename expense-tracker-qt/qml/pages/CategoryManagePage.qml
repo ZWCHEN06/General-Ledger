@@ -264,7 +264,6 @@ Item {
                                 clip: true
                                 color: "#202124"
                                 font.pixelSize: 16
-                                singleLine: true
                                 onAccepted: root.submitCategory()
                             }
 
@@ -359,7 +358,6 @@ Item {
                                 clip: true
                                 color: "#202124"
                                 font.pixelSize: 16
-                                singleLine: true
                                 onAccepted: root.submitEdit()
                             }
                         }
