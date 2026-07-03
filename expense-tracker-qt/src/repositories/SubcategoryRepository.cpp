@@ -464,3 +464,130 @@ SubcategoryRepositoryResult SubcategoryRepository::updateSubcategoryName(int id,
         QString()
     };
 }
+
+SubcategoryRepositoryResult SubcategoryRepository::deleteSubcategory(int id)
+{
+    if (id <= 0) {
+        return SubcategoryRepositoryResult {
+            false,
+            0,
+            QStringLiteral("二级分类 id 必须大于 0")
+        };
+    }
+
+    if (!m_database.isOpen()) {
+        return SubcategoryRepositoryResult {
+            false,
+            0,
+            QStringLiteral("数据库未打开，无法删除二级分类")
+        };
+    }
+
+    QSqlQuery subcategoryQuery(m_database);
+    if (!subcategoryQuery.prepare(QStringLiteral(R"(
+        SELECT
+            category_id,
+            name,
+            is_default
+        FROM subcategories
+        WHERE id = :id
+        LIMIT 1
+    )"))) {
+        const QString error = QStringLiteral("查询二级分类失败：%1").arg(subcategoryQuery.lastError().text());
+        qWarning().noquote() << error;
+        return SubcategoryRepositoryResult {false, 0, error};
+    }
+
+    subcategoryQuery.bindValue(QStringLiteral(":id"), id);
+
+    if (!subcategoryQuery.exec()) {
+        const QString error = QStringLiteral("查询二级分类失败：%1").arg(subcategoryQuery.lastError().text());
+        qWarning().noquote() << error;
+        return SubcategoryRepositoryResult {false, 0, error};
+    }
+
+    if (!subcategoryQuery.next()) {
+        return SubcategoryRepositoryResult {
+            false,
+            0,
+            QStringLiteral("二级分类不存在")
+        };
+    }
+
+    const int categoryId = subcategoryQuery.value(QStringLiteral("category_id")).toInt();
+    const QString name = subcategoryQuery.value(QStringLiteral("name")).toString();
+    const bool isDefault = subcategoryQuery.value(QStringLiteral("is_default")).toInt() == 1;
+    if (isDefault) {
+        return SubcategoryRepositoryResult {
+            false,
+            0,
+            QStringLiteral("默认二级分类不能删除")
+        };
+    }
+
+    QSqlQuery usageQuery(m_database);
+    if (!usageQuery.prepare(QStringLiteral(R"(
+        SELECT COUNT(*)
+        FROM transactions
+        WHERE subcategory_id = :id
+           OR (
+               subcategory_id IS NULL
+               AND subcategory = :name
+               AND category_id = :category_id
+           )
+    )"))) {
+        const QString error = QStringLiteral("检查二级分类使用状态失败：%1").arg(usageQuery.lastError().text());
+        qWarning().noquote() << error;
+        return SubcategoryRepositoryResult {false, 0, error};
+    }
+
+    usageQuery.bindValue(QStringLiteral(":id"), id);
+    usageQuery.bindValue(QStringLiteral(":name"), name);
+    usageQuery.bindValue(QStringLiteral(":category_id"), categoryId);
+
+    if (!usageQuery.exec() || !usageQuery.next()) {
+        const QString error = QStringLiteral("检查二级分类使用状态失败：%1").arg(usageQuery.lastError().text());
+        qWarning().noquote() << error;
+        return SubcategoryRepositoryResult {false, 0, error};
+    }
+
+    if (usageQuery.value(0).toInt() > 0) {
+        return SubcategoryRepositoryResult {
+            false,
+            0,
+            QStringLiteral("该二级分类已被账单使用，不能删除")
+        };
+    }
+
+    QSqlQuery deleteQuery(m_database);
+    if (!deleteQuery.prepare(QStringLiteral(R"(
+        DELETE FROM subcategories
+        WHERE id = :id
+    )"))) {
+        const QString error = QStringLiteral("删除二级分类失败：%1").arg(deleteQuery.lastError().text());
+        qWarning().noquote() << error;
+        return SubcategoryRepositoryResult {false, 0, error};
+    }
+
+    deleteQuery.bindValue(QStringLiteral(":id"), id);
+
+    if (!deleteQuery.exec()) {
+        const QString error = QStringLiteral("删除二级分类失败：%1").arg(deleteQuery.lastError().text());
+        qWarning().noquote() << error;
+        return SubcategoryRepositoryResult {false, 0, error};
+    }
+
+    if (deleteQuery.numRowsAffected() <= 0) {
+        return SubcategoryRepositoryResult {
+            false,
+            0,
+            QStringLiteral("二级分类不存在")
+        };
+    }
+
+    return SubcategoryRepositoryResult {
+        true,
+        id,
+        QString()
+    };
+}
