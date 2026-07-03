@@ -32,6 +32,31 @@ Item {
         root.errorMessage = ""
     }
 
+    function submitSubcategory() {
+        const subcategoryName = root.newSubcategoryName.trim()
+        if (subcategoryName.length === 0) {
+            root.errorMessage = "二级分类名称不能为空"
+            return
+        }
+
+        if (root.categoryId <= 0) {
+            root.errorMessage = "一级分类 id 无效"
+            return
+        }
+
+        const result = appController.addSubcategory(root.categoryId, subcategoryName)
+        if (!result.success) {
+            root.errorMessage = result.errorMessage.length > 0
+                    ? result.errorMessage
+                    : "新增二级分类失败"
+            return
+        }
+
+        root.errorMessage = ""
+        root.newSubcategoryName = ""
+        root.refreshSubcategories()
+    }
+
     Component.onCompleted: refreshSubcategories()
     onCategoryIdChanged: refreshSubcategories()
 
@@ -182,6 +207,7 @@ Item {
                                         root.newSubcategoryName = text
                                     }
                                 }
+                                onAccepted: root.submitSubcategory()
                             }
 
                             Text {
@@ -216,7 +242,7 @@ Item {
 
                                 anchors.fill: parent
                                 cursorShape: Qt.PointingHandCursor
-                                onClicked: root.errorMessage = "新增功能将在后续步骤接入"
+                                onClicked: root.submitSubcategory()
                             }
                         }
                     }
