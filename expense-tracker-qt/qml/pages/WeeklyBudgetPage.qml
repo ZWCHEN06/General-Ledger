@@ -7,6 +7,11 @@ Item {
 
     property date selectedWeekStartDate: getWeekStartDate(new Date())
     property string errorMessage: ""
+    property bool budgetDialogVisible: false
+    property int editingCategoryId: -1
+    property string editingCategoryName: ""
+    property string budgetAmountText: ""
+    property string budgetDialogError: ""
     readonly property int pageMargin: Math.max(16, Math.min(24, Math.round(width * 0.05)))
     readonly property int bottomInset: Qt.platform.os === "android" ? 72 : pageMargin
 
@@ -73,11 +78,63 @@ Item {
 
     function goPreviousWeek() {
         root.selectedWeekStartDate = addDays(root.selectedWeekStartDate, -7)
+        root.closeBudgetDialog()
         root.loadWeeklyBudget()
     }
 
     function goNextWeek() {
         root.selectedWeekStartDate = addDays(root.selectedWeekStartDate, 7)
+        root.closeBudgetDialog()
+        root.loadWeeklyBudget()
+    }
+
+    function openBudgetDialog(categoryId, categoryName, hasBudget, budgetAmount) {
+        root.editingCategoryId = categoryId
+        root.editingCategoryName = categoryName
+        root.budgetAmountText = hasBudget ? root.formatMoney(budgetAmount) : ""
+        root.budgetDialogError = ""
+        root.budgetDialogVisible = true
+        budgetInput.forceActiveFocus()
+    }
+
+    function closeBudgetDialog() {
+        root.budgetDialogVisible = false
+        root.editingCategoryId = -1
+        root.editingCategoryName = ""
+        root.budgetAmountText = ""
+        root.budgetDialogError = ""
+    }
+
+    function saveBudget() {
+        const trimmedAmount = root.budgetAmountText.trim()
+        if (trimmedAmount.length === 0) {
+            root.budgetDialogError = "预算金额不能为空"
+            return
+        }
+
+        const amount = Number(trimmedAmount)
+        if (isNaN(amount)) {
+            root.budgetDialogError = "预算金额必须是数字"
+            return
+        }
+
+        if (amount < 0) {
+            root.budgetDialogError = "预算金额不能小于 0"
+            return
+        }
+
+        const result = appController.setWeeklyBudget(
+                    root.formatDate(root.selectedWeekStartDate),
+                    root.editingCategoryId,
+                    amount)
+        if (!result.success) {
+            root.budgetDialogError = result.errorMessage.length > 0
+                    ? result.errorMessage
+                    : "保存预算失败"
+            return
+        }
+
+        root.closeBudgetDialog()
         root.loadWeeklyBudget()
     }
 
@@ -93,6 +150,7 @@ Item {
         contentWidth: width
         contentHeight: budgetColumn.height + root.pageMargin
         boundsBehavior: Flickable.StopAtBounds
+        enabled: !root.budgetDialogVisible
 
         Column {
             id: budgetColumn
@@ -322,6 +380,7 @@ Item {
                 delegate: Rectangle {
                     id: budgetItem
 
+                    required property int categoryId
                     required property string categoryName
                     required property real budgetAmount
                     required property real actualAmount
@@ -333,8 +392,20 @@ Item {
                     width: categoryBudgetListView.width
                     height: 164
                     radius: 8
-                    color: "#ffffff"
+                    color: itemMouseArea.pressed ? "#f8f9fa" : "#ffffff"
                     border.color: budgetItem.isOverBudget ? "#f4b4ae" : "#dadce0"
+
+                    MouseArea {
+                        id: itemMouseArea
+
+                        anchors.fill: parent
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: root.openBudgetDialog(
+                                       budgetItem.categoryId,
+                                       budgetItem.categoryName,
+                                       budgetItem.hasBudget,
+                                       budgetItem.budgetAmount)
+                    }
 
                     Column {
                         anchors.fill: parent
@@ -417,6 +488,154 @@ Item {
             Item {
                 width: parent.width
                 height: root.bottomInset
+            }
+        }
+    }
+
+    Rectangle {
+        anchors.fill: parent
+        z: 10
+        color: "#80000000"
+        visible: root.budgetDialogVisible
+
+        MouseArea {
+            anchors.fill: parent
+            onClicked: root.closeBudgetDialog()
+        }
+
+        Rectangle {
+            anchors.centerIn: parent
+            width: Math.min(parent.width - root.pageMargin * 2, 340)
+            height: root.budgetDialogError.length > 0 ? 236 : 204
+            radius: 8
+            color: "#ffffff"
+            border.color: "#dadce0"
+
+            MouseArea {
+                anchors.fill: parent
+            }
+
+            Column {
+                anchors.fill: parent
+                anchors.margins: 18
+                spacing: 12
+
+                Text {
+                    width: parent.width
+                    text: "设置预算"
+                    color: "#202124"
+                    font.pixelSize: 20
+                    font.bold: true
+                    elide: Text.ElideRight
+                }
+
+                Text {
+                    width: parent.width
+                    text: root.editingCategoryName
+                    color: "#5f6368"
+                    font.pixelSize: 15
+                    elide: Text.ElideRight
+                }
+
+                Rectangle {
+                    width: parent.width
+                    height: 44
+                    radius: 8
+                    color: "#ffffff"
+                    border.color: budgetInput.activeFocus ? "#1a73e8" : "#dadce0"
+
+                    TextInput {
+                        id: budgetInput
+
+                        anchors.fill: parent
+                        anchors.leftMargin: 12
+                        anchors.rightMargin: 12
+                        verticalAlignment: TextInput.AlignVCenter
+                        clip: true
+                        color: "#202124"
+                        font.pixelSize: 16
+                        inputMethodHints: Qt.ImhFormattedNumbersOnly
+                        text: root.budgetAmountText
+                        onTextChanged: {
+                            if (root.budgetAmountText !== text) {
+                                root.budgetAmountText = text
+                            }
+                        }
+                        onAccepted: root.saveBudget()
+                    }
+
+                    Text {
+                        anchors.left: parent.left
+                        anchors.leftMargin: 12
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: "输入预算金额"
+                        color: "#9aa0a6"
+                        font.pixelSize: 16
+                        visible: budgetInput.text.length === 0
+                    }
+                }
+
+                Text {
+                    width: parent.width
+                    text: root.budgetDialogError
+                    color: "#b3261e"
+                    font.pixelSize: 14
+                    wrapMode: Text.WordWrap
+                    visible: root.budgetDialogError.length > 0
+                }
+
+                Row {
+                    width: parent.width
+                    height: 42
+                    spacing: 10
+
+                    Rectangle {
+                        width: (parent.width - parent.spacing) / 2
+                        height: parent.height
+                        radius: 8
+                        color: cancelBudgetMouseArea.pressed ? "#f1f3f4" : "#ffffff"
+                        border.color: "#dadce0"
+
+                        Text {
+                            anchors.centerIn: parent
+                            text: "取消"
+                            color: "#3c4043"
+                            font.pixelSize: 16
+                            font.bold: true
+                        }
+
+                        MouseArea {
+                            id: cancelBudgetMouseArea
+
+                            anchors.fill: parent
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: root.closeBudgetDialog()
+                        }
+                    }
+
+                    Rectangle {
+                        width: (parent.width - parent.spacing) / 2
+                        height: parent.height
+                        radius: 8
+                        color: saveBudgetMouseArea.pressed ? "#185abc" : "#1a73e8"
+
+                        Text {
+                            anchors.centerIn: parent
+                            text: "保存"
+                            color: "#ffffff"
+                            font.pixelSize: 16
+                            font.bold: true
+                        }
+
+                        MouseArea {
+                            id: saveBudgetMouseArea
+
+                            anchors.fill: parent
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: root.saveBudget()
+                        }
+                    }
+                }
             }
         }
     }
