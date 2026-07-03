@@ -22,6 +22,8 @@ std::optional<Transaction> transactionFromCurrentRow(const QSqlQuery &query)
     const std::optional<int> categoryId = categoryIdValue.isNull()
         ? std::nullopt
         : std::optional<int>(categoryIdValue.toInt());
+    const QVariant subcategoryIdValue = query.value(QStringLiteral("subcategory_id"));
+    const int subcategoryId = subcategoryIdValue.isNull() ? -1 : subcategoryIdValue.toInt();
 
     bool typeOk = false;
     const TransactionType type = Transaction::typeFromString(query.value(QStringLiteral("type")).toString(), &typeOk);
@@ -39,7 +41,9 @@ std::optional<Transaction> transactionFromCurrentRow(const QSqlQuery &query)
         query.value(QStringLiteral("note")).toString(),
         query.value(QStringLiteral("created_at")).toString(),
         query.value(QStringLiteral("updated_at")).toString(),
-        categoryId);
+        categoryId,
+        subcategoryId,
+        query.value(QStringLiteral("subcategory")).toString());
 }
 
 QDate parseStoredTransactionDate(const QString &date)
@@ -188,6 +192,8 @@ QList<Transaction> TransactionRepository::getAllTransactions()
             transactions.amount AS amount,
             COALESCE(categories.name, transactions.category) AS category,
             transactions.category_id AS category_id,
+            transactions.subcategory_id AS subcategory_id,
+            transactions.subcategory AS subcategory,
             transactions.date AS date,
             transactions.note AS note,
             transactions.created_at AS created_at,
@@ -265,6 +271,8 @@ QList<Transaction> TransactionRepository::getTransactionsByFilter(const Transact
             transactions.amount AS amount,
             COALESCE(categories.name, transactions.category) AS category,
             transactions.category_id AS category_id,
+            transactions.subcategory_id AS subcategory_id,
+            transactions.subcategory AS subcategory,
             transactions.date AS date,
             transactions.note AS note,
             transactions.created_at AS created_at,
@@ -352,6 +360,8 @@ QList<Transaction> TransactionRepository::getTransactionsByMonth(int year, int m
             transactions.amount AS amount,
             COALESCE(categories.name, transactions.category) AS category,
             transactions.category_id AS category_id,
+            transactions.subcategory_id AS subcategory_id,
+            transactions.subcategory AS subcategory,
             transactions.date AS date,
             transactions.note AS note,
             transactions.created_at AS created_at,
@@ -463,6 +473,8 @@ std::optional<Transaction> TransactionRepository::getTransactionById(int id)
             transactions.amount AS amount,
             COALESCE(categories.name, transactions.category) AS category,
             transactions.category_id AS category_id,
+            transactions.subcategory_id AS subcategory_id,
+            transactions.subcategory AS subcategory,
             transactions.date AS date,
             transactions.note AS note,
             transactions.created_at AS created_at,
