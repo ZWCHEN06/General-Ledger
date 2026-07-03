@@ -14,6 +14,9 @@ Item {
     property int editingSubcategoryId: -1
     property string editingSubcategoryName: ""
     property string editingSubcategoryDraftName: ""
+    property int deletingSubcategoryId: -1
+    property string deletingSubcategoryName: ""
+    property bool deleteConfirmVisible: false
     readonly property int pageMargin: Math.max(16, Math.min(24, Math.round(width * 0.05)))
     readonly property int bottomInset: Qt.platform.os === "android" ? 72 : pageMargin
 
@@ -66,6 +69,12 @@ Item {
         root.editingSubcategoryDraftName = ""
     }
 
+    function cancelDelete() {
+        root.deletingSubcategoryId = -1
+        root.deletingSubcategoryName = ""
+        root.deleteConfirmVisible = false
+    }
+
     function startEdit(subcategoryId, subcategoryName, isDefault) {
         if (isDefault) {
             root.errorMessage = "默认二级分类不能改名"
@@ -102,9 +111,46 @@ Item {
         root.refreshSubcategories()
     }
 
+    function requestDelete(subcategoryId, subcategoryName, isDefault) {
+        if (isDefault) {
+            root.errorMessage = "默认二级分类不能删除"
+            return
+        }
+
+        root.errorMessage = ""
+        root.deletingSubcategoryId = subcategoryId
+        root.deletingSubcategoryName = subcategoryName
+        root.deleteConfirmVisible = true
+    }
+
+    function confirmDelete() {
+        if (root.deletingSubcategoryId <= 0) {
+            root.cancelDelete()
+            return
+        }
+
+        const result = appController.deleteSubcategory(root.deletingSubcategoryId)
+        if (!result.success) {
+            root.errorMessage = result.errorMessage.length > 0
+                    ? result.errorMessage
+                    : "删除二级分类失败"
+            root.cancelDelete()
+            return
+        }
+
+        if (root.editingSubcategoryId === root.deletingSubcategoryId) {
+            root.cancelEdit()
+        }
+
+        root.errorMessage = ""
+        root.cancelDelete()
+        root.refreshSubcategories()
+    }
+
     Component.onCompleted: refreshSubcategories()
     onCategoryIdChanged: {
         root.cancelEdit()
+        root.cancelDelete()
         refreshSubcategories()
     }
 
@@ -428,7 +474,7 @@ Item {
 
                 Column {
                     anchors.verticalCenter: parent.verticalCenter
-                    width: parent.width - editButton.width - parent.spacing
+                    width: parent.width - actionRow.width - parent.spacing
                     spacing: 4
 
                     Text {
@@ -449,30 +495,58 @@ Item {
                     }
                 }
 
-                Rectangle {
-                    id: editButton
+                Row {
+                    id: actionRow
 
                     anchors.verticalCenter: parent.verticalCenter
-                    width: 56
-                    height: 32
-                    radius: 6
-                    visible: !isDefault
-                    color: editArea.pressed ? "#d2e3fc" : "#e8f0fe"
-                    border.color: "#1a73e8"
+                    spacing: 8
 
-                    Text {
-                        anchors.centerIn: parent
-                        text: "编辑"
-                        color: "#174ea6"
-                        font.pixelSize: 14
+                    Rectangle {
+                        width: 56
+                        height: 32
+                        radius: 6
+                        visible: !isDefault
+                        color: editArea.pressed ? "#d2e3fc" : "#e8f0fe"
+                        border.color: "#1a73e8"
+
+                        Text {
+                            anchors.centerIn: parent
+                            text: "编辑"
+                            color: "#174ea6"
+                            font.pixelSize: 14
+                        }
+
+                        MouseArea {
+                            id: editArea
+
+                            anchors.fill: parent
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: root.startEdit(model.id, name, isDefault)
+                        }
                     }
 
-                    MouseArea {
-                        id: editArea
+                    Rectangle {
+                        width: 56
+                        height: 32
+                        radius: 6
+                        visible: !isDefault
+                        color: deleteArea.pressed ? "#fad2cf" : "#fce8e6"
+                        border.color: "#d93025"
 
-                        anchors.fill: parent
-                        cursorShape: Qt.PointingHandCursor
-                        onClicked: root.startEdit(model.id, name, isDefault)
+                        Text {
+                            anchors.centerIn: parent
+                            text: "删除"
+                            color: "#a50e0e"
+                            font.pixelSize: 14
+                        }
+
+                        MouseArea {
+                            id: deleteArea
+
+                            anchors.fill: parent
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: root.requestDelete(model.id, name, isDefault)
+                        }
                     }
                 }
             }
@@ -493,5 +567,111 @@ Item {
         horizontalAlignment: Text.AlignHCenter
         wrapMode: Text.WordWrap
         visible: subcategoryListView.count === 0 && root.errorMessage.length === 0
+    }
+
+    Rectangle {
+        anchors.fill: parent
+        z: 10
+        color: "#80000000"
+        visible: root.deleteConfirmVisible
+
+        MouseArea {
+            anchors.fill: parent
+            onClicked: root.cancelDelete()
+        }
+
+        Rectangle {
+            anchors.centerIn: parent
+            width: Math.min(parent.width - root.pageMargin * 2, 320)
+            height: 184
+            radius: 8
+            color: "#ffffff"
+            border.color: "#dadce0"
+
+            MouseArea {
+                anchors.fill: parent
+            }
+
+            Column {
+                anchors.fill: parent
+                anchors.margins: 18
+                spacing: 14
+
+                Text {
+                    width: parent.width
+                    text: "确认删除二级分类"
+                    color: "#202124"
+                    font.pixelSize: 20
+                    font.bold: true
+                    elide: Text.ElideRight
+                }
+
+                Text {
+                    width: parent.width
+                    text: "确定要删除“" + root.deletingSubcategoryName + "”吗？"
+                    color: "#5f6368"
+                    font.pixelSize: 15
+                    wrapMode: Text.WordWrap
+                }
+
+                Item {
+                    width: parent.width
+                    height: 12
+                }
+
+                Row {
+                    width: parent.width
+                    height: 42
+                    spacing: 10
+
+                    Rectangle {
+                        width: (parent.width - parent.spacing) / 2
+                        height: parent.height
+                        radius: 8
+                        color: cancelDeleteMouseArea.pressed ? "#f1f3f4" : "#ffffff"
+                        border.color: "#dadce0"
+
+                        Text {
+                            anchors.centerIn: parent
+                            text: "取消"
+                            color: "#3c4043"
+                            font.pixelSize: 16
+                            font.bold: true
+                        }
+
+                        MouseArea {
+                            id: cancelDeleteMouseArea
+
+                            anchors.fill: parent
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: root.cancelDelete()
+                        }
+                    }
+
+                    Rectangle {
+                        width: (parent.width - parent.spacing) / 2
+                        height: parent.height
+                        radius: 8
+                        color: confirmDeleteMouseArea.pressed ? "#a50e0e" : "#d93025"
+
+                        Text {
+                            anchors.centerIn: parent
+                            text: "删除"
+                            color: "#ffffff"
+                            font.pixelSize: 16
+                            font.bold: true
+                        }
+
+                        MouseArea {
+                            id: confirmDeleteMouseArea
+
+                            anchors.fill: parent
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: root.confirmDelete()
+                        }
+                    }
+                }
+            }
+        }
     }
 }
