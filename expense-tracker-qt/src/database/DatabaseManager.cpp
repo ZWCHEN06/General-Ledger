@@ -254,6 +254,10 @@ bool DatabaseManager::migrateDatabase()
         return false;
     }
 
+    if (version < 6 && !migrateToVersion6()) {
+        return false;
+    }
+
     return true;
 }
 
@@ -427,6 +431,40 @@ bool DatabaseManager::migrateToVersion5()
     return true;
 }
 
+bool DatabaseManager::migrateToVersion6()
+{
+    if (!m_database.transaction()) {
+        m_lastErrorMessage = QStringLiteral("Failed to start SQLite schema migration to version 6: %1")
+                                 .arg(m_database.lastError().text());
+        qWarning().noquote() << "Failed to start SQLite schema migration transaction:"
+                             << m_database.lastError().text();
+        return false;
+    }
+
+    const auto rollbackMigration = [this]() {
+        if (!m_database.rollback()) {
+            qWarning().noquote() << "Failed to roll back SQLite schema migration:"
+                                 << m_database.lastError().text();
+        }
+    };
+
+    if (!createSubcategoriesTable() || !setUserVersion(6)) {
+        rollbackMigration();
+        return false;
+    }
+
+    if (!m_database.commit()) {
+        m_lastErrorMessage = QStringLiteral("Failed to commit SQLite schema migration to version 6: %1")
+                                 .arg(m_database.lastError().text());
+        qWarning().noquote() << "Failed to commit SQLite schema migration:"
+                             << m_database.lastError().text();
+        rollbackMigration();
+        return false;
+    }
+
+    return true;
+}
+
 bool DatabaseManager::createCategoriesTable()
 {
     QSqlQuery query(m_database);
@@ -459,6 +497,33 @@ bool DatabaseManager::createCategoriesTable()
         m_lastErrorMessage = QStringLiteral("Failed to create categories index during schema migration to version 1: %1")
                                  .arg(query.lastError().text());
         qWarning().noquote() << "Failed to create categories index:" << query.lastError().text();
+        return false;
+    }
+
+    return true;
+}
+
+bool DatabaseManager::createSubcategoriesTable()
+{
+    QSqlQuery query(m_database);
+    const bool tableCreated = query.exec(QStringLiteral(R"(
+        CREATE TABLE IF NOT EXISTS subcategories (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            category_id INTEGER NOT NULL,
+            name TEXT NOT NULL,
+            is_default INTEGER NOT NULL DEFAULT 0,
+            sort_order INTEGER NOT NULL DEFAULT 0,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            UNIQUE(category_id, name),
+            FOREIGN KEY(category_id) REFERENCES categories(id)
+        )
+    )"));
+
+    if (!tableCreated) {
+        m_lastErrorMessage = QStringLiteral("Failed to create subcategories table during schema migration to version 6: %1")
+                                 .arg(query.lastError().text());
+        qWarning().noquote() << "Failed to create subcategories table:" << query.lastError().text();
         return false;
     }
 
