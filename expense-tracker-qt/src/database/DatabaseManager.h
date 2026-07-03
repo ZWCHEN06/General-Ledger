@@ -19,7 +19,7 @@ public:
 private:
     static constexpr const char *ConnectionName = "expense_tracker_connection";
     static constexpr const char *DatabaseFileName = "expense_tracker.db";
-    static constexpr int CurrentSchemaVersion = 7;
+    static constexpr int CurrentSchemaVersion = 8;
 
     bool enableForeignKeys();
     bool ensureTransactionsTable();
@@ -33,12 +33,14 @@ private:
     bool migrateToVersion5();
     bool migrateToVersion6();
     bool migrateToVersion7();
+    bool migrateToVersion8();
     bool createCategoriesTable();
     bool createWeeklyBudgetsTable();
     bool createSubcategoriesTable();
     bool addTransactionCategoryIdColumn();
     bool addTransactionSubcategoryColumns();
     bool seedDefaultCategories();
+    bool seedDefaultSubcategories();
     bool backfillTransactionCategoryIds();
     bool columnExists(const QString &tableName, const QString &columnName, bool *exists);
 

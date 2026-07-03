@@ -8,6 +8,7 @@
 #include <QSqlError>
 #include <QSqlQuery>
 #include <QStandardPaths>
+#include <QStringList>
 
 namespace {
 QString prepareDatabasePath(const QString &databaseFileName, bool *ok)
@@ -262,6 +263,10 @@ bool DatabaseManager::migrateDatabase()
         return false;
     }
 
+    if (version < 8 && !migrateToVersion8()) {
+        return false;
+    }
+
     return true;
 }
 
@@ -503,6 +508,40 @@ bool DatabaseManager::migrateToVersion7()
     return true;
 }
 
+bool DatabaseManager::migrateToVersion8()
+{
+    if (!m_database.transaction()) {
+        m_lastErrorMessage = QStringLiteral("Failed to start SQLite schema migration to version 8: %1")
+                                 .arg(m_database.lastError().text());
+        qWarning().noquote() << "Failed to start SQLite schema migration transaction:"
+                             << m_database.lastError().text();
+        return false;
+    }
+
+    const auto rollbackMigration = [this]() {
+        if (!m_database.rollback()) {
+            qWarning().noquote() << "Failed to roll back SQLite schema migration:"
+                                 << m_database.lastError().text();
+        }
+    };
+
+    if (!seedDefaultSubcategories() || !setUserVersion(8)) {
+        rollbackMigration();
+        return false;
+    }
+
+    if (!m_database.commit()) {
+        m_lastErrorMessage = QStringLiteral("Failed to commit SQLite schema migration to version 8: %1")
+                                 .arg(m_database.lastError().text());
+        qWarning().noquote() << "Failed to commit SQLite schema migration:"
+                             << m_database.lastError().text();
+        rollbackMigration();
+        return false;
+    }
+
+    return true;
+}
+
 bool DatabaseManager::createCategoriesTable()
 {
     QSqlQuery query(m_database);
@@ -684,6 +723,190 @@ bool DatabaseManager::seedDefaultCategories()
             qWarning().noquote() << "Failed to seed default category:"
                                  << category.type << category.name << query.lastError().text();
             return false;
+        }
+    }
+
+    return true;
+}
+
+bool DatabaseManager::seedDefaultSubcategories()
+{
+    struct DefaultSubcategorySeed
+    {
+        QString categoryName;
+        QString type;
+        QStringList names;
+    };
+
+    const DefaultSubcategorySeed defaultSubcategories[] = {
+        {QStringLiteral("餐饮"), QStringLiteral("expense"), {
+            QStringLiteral("早餐"),
+            QStringLiteral("午餐"),
+            QStringLiteral("晚餐"),
+            QStringLiteral("咖啡"),
+            QStringLiteral("零食"),
+            QStringLiteral("外卖"),
+            QStringLiteral("其他"),
+            QStringLiteral("请客吃饭")
+        }},
+        {QStringLiteral("交通"), QStringLiteral("expense"), {
+            QStringLiteral("地铁"),
+            QStringLiteral("公交"),
+            QStringLiteral("打车"),
+            QStringLiteral("火车"),
+            QStringLiteral("机票"),
+            QStringLiteral("停车"),
+            QStringLiteral("加油"),
+            QStringLiteral("其他")
+        }},
+        {QStringLiteral("购物"), QStringLiteral("expense"), {
+            QStringLiteral("日用品"),
+            QStringLiteral("服饰"),
+            QStringLiteral("电子产品"),
+            QStringLiteral("网购"),
+            QStringLiteral("其他")
+        }},
+        {QStringLiteral("学习"), QStringLiteral("expense"), {
+            QStringLiteral("书籍"),
+            QStringLiteral("课程"),
+            QStringLiteral("考试"),
+            QStringLiteral("文具"),
+            QStringLiteral("其他")
+        }},
+        {QStringLiteral("娱乐"), QStringLiteral("expense"), {
+            QStringLiteral("电影"),
+            QStringLiteral("游戏"),
+            QStringLiteral("聚会"),
+            QStringLiteral("旅游"),
+            QStringLiteral("其他")
+        }},
+        {QStringLiteral("住房"), QStringLiteral("expense"), {
+            QStringLiteral("房租"),
+            QStringLiteral("水电"),
+            QStringLiteral("物业"),
+            QStringLiteral("维修"),
+            QStringLiteral("其他")
+        }},
+        {QStringLiteral("医疗"), QStringLiteral("expense"), {
+            QStringLiteral("药品"),
+            QStringLiteral("门诊"),
+            QStringLiteral("体检"),
+            QStringLiteral("保险"),
+            QStringLiteral("其他")
+        }},
+        {QStringLiteral("其他"), QStringLiteral("expense"), {
+            QStringLiteral("其他")
+        }},
+        {QStringLiteral("工资"), QStringLiteral("income"), {
+            QStringLiteral("基本工资"),
+            QStringLiteral("奖金"),
+            QStringLiteral("补贴"),
+            QStringLiteral("其他")
+        }},
+        {QStringLiteral("兼职"), QStringLiteral("income"), {
+            QStringLiteral("项目收入"),
+            QStringLiteral("小时工"),
+            QStringLiteral("其他")
+        }},
+        {QStringLiteral("投资"), QStringLiteral("income"), {
+            QStringLiteral("股票"),
+            QStringLiteral("基金"),
+            QStringLiteral("利息"),
+            QStringLiteral("其他")
+        }},
+        {QStringLiteral("生活费"), QStringLiteral("income"), {
+            QStringLiteral("家庭支持"),
+            QStringLiteral("其他")
+        }},
+        {QStringLiteral("奖学金"), QStringLiteral("income"), {
+            QStringLiteral("学校奖学金"),
+            QStringLiteral("竞赛奖金"),
+            QStringLiteral("其他")
+        }},
+        {QStringLiteral("其他"), QStringLiteral("income"), {
+            QStringLiteral("其他")
+        }}
+    };
+
+    QSqlQuery categoryQuery(m_database);
+    if (!categoryQuery.prepare(QStringLiteral(R"(
+        SELECT id
+        FROM categories
+        WHERE name = :category_name
+          AND type = :type
+        LIMIT 1
+    )"))) {
+        m_lastErrorMessage = QStringLiteral("Failed to prepare default subcategory parent category SQL during schema migration to version 8: %1")
+                                 .arg(categoryQuery.lastError().text());
+        qWarning().noquote() << "Failed to prepare default subcategory parent category SQL:"
+                             << categoryQuery.lastError().text();
+        return false;
+    }
+
+    QSqlQuery insertQuery(m_database);
+    if (!insertQuery.prepare(QStringLiteral(R"(
+        INSERT OR IGNORE INTO subcategories (
+            category_id,
+            name,
+            is_default,
+            sort_order,
+            created_at,
+            updated_at
+        ) VALUES (
+            :category_id,
+            :name,
+            1,
+            :sort_order,
+            :created_at,
+            :updated_at
+        )
+    )"))) {
+        m_lastErrorMessage = QStringLiteral("Failed to prepare default subcategory seed SQL during schema migration to version 8: %1")
+                                 .arg(insertQuery.lastError().text());
+        qWarning().noquote() << "Failed to prepare default subcategory seed SQL:"
+                             << insertQuery.lastError().text();
+        return false;
+    }
+
+    const QString now = QDateTime::currentDateTime().toString(Qt::ISODate);
+    for (const DefaultSubcategorySeed &category : defaultSubcategories) {
+        categoryQuery.bindValue(QStringLiteral(":category_name"), category.categoryName);
+        categoryQuery.bindValue(QStringLiteral(":type"), category.type);
+
+        if (!categoryQuery.exec()) {
+            m_lastErrorMessage = QStringLiteral("Failed to find parent category '%1/%2' during schema migration to version 8: %3")
+                                     .arg(category.type)
+                                     .arg(category.categoryName)
+                                     .arg(categoryQuery.lastError().text());
+            qWarning().noquote() << "Failed to find parent category for default subcategories:"
+                                 << category.type << category.categoryName << categoryQuery.lastError().text();
+            return false;
+        }
+
+        if (!categoryQuery.next()) {
+            qWarning().noquote() << "Skipped default subcategories because parent category is missing:"
+                                 << category.type << category.categoryName;
+            continue;
+        }
+
+        const int categoryId = categoryQuery.value(QStringLiteral("id")).toInt();
+        for (int sortOrder = 0; sortOrder < category.names.size(); ++sortOrder) {
+            insertQuery.bindValue(QStringLiteral(":category_id"), categoryId);
+            insertQuery.bindValue(QStringLiteral(":name"), category.names.at(sortOrder));
+            insertQuery.bindValue(QStringLiteral(":sort_order"), sortOrder);
+            insertQuery.bindValue(QStringLiteral(":created_at"), now);
+            insertQuery.bindValue(QStringLiteral(":updated_at"), now);
+
+            if (!insertQuery.exec()) {
+                m_lastErrorMessage = QStringLiteral("Failed to seed default subcategory '%1/%2' during schema migration to version 8: %3")
+                                         .arg(category.categoryName)
+                                         .arg(category.names.at(sortOrder))
+                                         .arg(insertQuery.lastError().text());
+                qWarning().noquote() << "Failed to seed default subcategory:"
+                                     << category.categoryName << category.names.at(sortOrder)
+                                     << insertQuery.lastError().text();
+                return false;
+            }
         }
     }
 
