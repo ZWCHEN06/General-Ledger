@@ -408,14 +408,23 @@ QHash<int, double> TransactionRepository::getWeeklyExpenseByCategory(const QStri
     QSqlQuery query(m_database);
     if (!query.prepare(QStringLiteral(R"(
         SELECT
-            category_id,
+            resolved_category_id AS category_id,
             SUM(amount) AS actual_amount
-        FROM transactions
-        WHERE type = 'expense'
-          AND date >= :weekStartDate
-          AND date <= :weekEndDate
-          AND category_id IS NOT NULL
-        GROUP BY category_id
+        FROM (
+            SELECT
+                COALESCE(transactions.category_id, categories.id) AS resolved_category_id,
+                transactions.amount AS amount
+            FROM transactions
+            LEFT JOIN categories
+              ON transactions.category_id IS NULL
+             AND categories.name = transactions.category
+             AND categories.type = transactions.type
+            WHERE transactions.type = 'expense'
+              AND transactions.date >= :weekStartDate
+              AND transactions.date <= :weekEndDate
+        ) AS weekly_expenses
+        WHERE resolved_category_id IS NOT NULL
+        GROUP BY resolved_category_id
     )"))) {
         qWarning().noquote() << "按周统计分类支出失败：SQL 准备失败:" << query.lastError().text();
         return expensesByCategory;
@@ -435,7 +444,7 @@ QHash<int, double> TransactionRepository::getWeeklyExpenseByCategory(const QStri
             query.value(QStringLiteral("actual_amount")).toDouble());
     }
 
-    // 旧账单如果 category_id 为空，本阶段暂不纳入每周分类预算统计。
+    // 旧账单 category_id 为空时，按 category 文本和 type 匹配分类后纳入统计。
     return expensesByCategory;
 }
 
