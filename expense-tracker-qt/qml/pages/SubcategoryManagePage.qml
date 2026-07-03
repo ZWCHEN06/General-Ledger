@@ -11,6 +11,9 @@ Item {
     property string categoryName: ""
     property string newSubcategoryName: ""
     property string errorMessage: ""
+    property int editingSubcategoryId: -1
+    property string editingSubcategoryName: ""
+    property string editingSubcategoryDraftName: ""
     readonly property int pageMargin: Math.max(16, Math.min(24, Math.round(width * 0.05)))
     readonly property int bottomInset: Qt.platform.os === "android" ? 72 : pageMargin
 
@@ -57,8 +60,53 @@ Item {
         root.refreshSubcategories()
     }
 
+    function cancelEdit() {
+        root.editingSubcategoryId = -1
+        root.editingSubcategoryName = ""
+        root.editingSubcategoryDraftName = ""
+    }
+
+    function startEdit(subcategoryId, subcategoryName, isDefault) {
+        if (isDefault) {
+            root.errorMessage = "默认二级分类不能改名"
+            return
+        }
+
+        root.errorMessage = ""
+        root.editingSubcategoryId = subcategoryId
+        root.editingSubcategoryName = subcategoryName
+        root.editingSubcategoryDraftName = subcategoryName
+    }
+
+    function submitEdit() {
+        if (root.editingSubcategoryId <= 0) {
+            return
+        }
+
+        const subcategoryName = root.editingSubcategoryDraftName.trim()
+        if (subcategoryName.length === 0) {
+            root.errorMessage = "二级分类名称不能为空"
+            return
+        }
+
+        const result = appController.updateSubcategory(root.editingSubcategoryId, subcategoryName)
+        if (!result.success) {
+            root.errorMessage = result.errorMessage.length > 0
+                    ? result.errorMessage
+                    : "更新二级分类失败"
+            return
+        }
+
+        root.errorMessage = ""
+        root.cancelEdit()
+        root.refreshSubcategories()
+    }
+
     Component.onCompleted: refreshSubcategories()
-    onCategoryIdChanged: refreshSubcategories()
+    onCategoryIdChanged: {
+        root.cancelEdit()
+        refreshSubcategories()
+    }
 
     ListView {
         id: subcategoryListView
@@ -249,6 +297,113 @@ Item {
                 }
             }
 
+            Rectangle {
+                width: parent.width
+                height: root.editingSubcategoryId > 0 ? 108 : 0
+                radius: 8
+                color: "#ffffff"
+                border.color: "#dadce0"
+                visible: root.editingSubcategoryId > 0
+
+                Column {
+                    anchors.fill: parent
+                    anchors.margins: 12
+                    spacing: 10
+
+                    Text {
+                        width: parent.width
+                        text: "编辑二级分类"
+                        color: "#202124"
+                        font.pixelSize: 16
+                        font.bold: true
+                    }
+
+                    Row {
+                        width: parent.width
+                        height: 44
+                        spacing: 10
+
+                        Rectangle {
+                            width: parent.width - saveEditButton.width - cancelEditButton.width - parent.spacing * 2
+                            height: parent.height
+                            radius: 8
+                            color: "#ffffff"
+                            border.color: editNameInput.activeFocus ? "#1a73e8" : "#dadce0"
+
+                            TextInput {
+                                id: editNameInput
+
+                                anchors.fill: parent
+                                anchors.leftMargin: 12
+                                anchors.rightMargin: 12
+                                verticalAlignment: TextInput.AlignVCenter
+                                clip: true
+                                color: "#202124"
+                                font.pixelSize: 16
+                                text: root.editingSubcategoryDraftName
+                                onTextChanged: {
+                                    if (root.editingSubcategoryDraftName !== text) {
+                                        root.editingSubcategoryDraftName = text
+                                    }
+                                }
+                                onAccepted: root.submitEdit()
+                            }
+                        }
+
+                        Rectangle {
+                            id: saveEditButton
+
+                            width: 64
+                            height: parent.height
+                            radius: 8
+                            color: saveEditMouseArea.pressed ? "#185abc" : "#1a73e8"
+
+                            Text {
+                                anchors.centerIn: parent
+                                text: "保存"
+                                color: "#ffffff"
+                                font.pixelSize: 16
+                                font.bold: true
+                            }
+
+                            MouseArea {
+                                id: saveEditMouseArea
+
+                                anchors.fill: parent
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: root.submitEdit()
+                            }
+                        }
+
+                        Rectangle {
+                            id: cancelEditButton
+
+                            width: 64
+                            height: parent.height
+                            radius: 8
+                            color: cancelEditMouseArea.pressed ? "#f1f3f4" : "#ffffff"
+                            border.color: "#dadce0"
+
+                            Text {
+                                anchors.centerIn: parent
+                                text: "取消"
+                                color: "#3c4043"
+                                font.pixelSize: 16
+                                font.bold: true
+                            }
+
+                            MouseArea {
+                                id: cancelEditMouseArea
+
+                                anchors.fill: parent
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: root.cancelEdit()
+                            }
+                        }
+                    }
+                }
+            }
+
             Item {
                 width: parent.width
                 height: 2
@@ -265,29 +420,60 @@ Item {
             color: "#ffffff"
             border.color: "#dadce0"
 
-            Column {
-                anchors.verticalCenter: parent.verticalCenter
-                anchors.left: parent.left
-                anchors.right: parent.right
+            Row {
+                anchors.fill: parent
                 anchors.leftMargin: 16
-                anchors.rightMargin: 16
-                spacing: 4
+                anchors.rightMargin: 12
+                spacing: 12
 
-                Text {
-                    width: parent.width
-                    text: name
-                    color: "#202124"
-                    font.pixelSize: 16
-                    font.bold: true
-                    elide: Text.ElideRight
+                Column {
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: parent.width - editButton.width - parent.spacing
+                    spacing: 4
+
+                    Text {
+                        width: parent.width
+                        text: name
+                        color: "#202124"
+                        font.pixelSize: 16
+                        font.bold: true
+                        elide: Text.ElideRight
+                    }
+
+                    Text {
+                        width: parent.width
+                        text: isDefault ? "默认二级分类" : "自定义二级分类"
+                        color: isDefault ? "#5f6368" : "#1a73e8"
+                        font.pixelSize: 12
+                        elide: Text.ElideRight
+                    }
                 }
 
-                Text {
-                    width: parent.width
-                    text: isDefault ? "默认二级分类" : "自定义二级分类"
-                    color: isDefault ? "#5f6368" : "#1a73e8"
-                    font.pixelSize: 12
-                    elide: Text.ElideRight
+                Rectangle {
+                    id: editButton
+
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: 56
+                    height: 32
+                    radius: 6
+                    visible: !isDefault
+                    color: editArea.pressed ? "#d2e3fc" : "#e8f0fe"
+                    border.color: "#1a73e8"
+
+                    Text {
+                        anchors.centerIn: parent
+                        text: "编辑"
+                        color: "#174ea6"
+                        font.pixelSize: 14
+                    }
+
+                    MouseArea {
+                        id: editArea
+
+                        anchors.fill: parent
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: root.startEdit(model.id, name, isDefault)
+                    }
                 }
             }
         }
