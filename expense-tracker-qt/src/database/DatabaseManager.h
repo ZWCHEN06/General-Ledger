@@ -21,6 +21,7 @@ private:
     static constexpr const char *DatabaseFileName = "expense_tracker.db";
     static constexpr int CurrentSchemaVersion = 5;
 
+    bool enableForeignKeys();
     bool ensureTransactionsTable();
     int currentUserVersion();
     bool setUserVersion(int version);

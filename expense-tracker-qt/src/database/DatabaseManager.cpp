@@ -121,11 +121,41 @@ bool DatabaseManager::initializeTables()
         return false;
     }
 
+    if (!enableForeignKeys()) {
+        return false;
+    }
+
     if (!ensureTransactionsTable()) {
         return false;
     }
 
     return migrateDatabase();
+}
+
+bool DatabaseManager::enableForeignKeys()
+{
+    QSqlQuery query(m_database);
+    if (!query.exec(QStringLiteral("PRAGMA foreign_keys = ON"))) {
+        m_lastErrorMessage = QStringLiteral("Failed to enable SQLite foreign keys: %1")
+                                 .arg(query.lastError().text());
+        qWarning().noquote() << "Failed to enable SQLite foreign keys:" << query.lastError().text();
+        return false;
+    }
+
+    if (!query.exec(QStringLiteral("PRAGMA foreign_keys"))) {
+        m_lastErrorMessage = QStringLiteral("Failed to verify SQLite foreign keys: %1")
+                                 .arg(query.lastError().text());
+        qWarning().noquote() << "Failed to verify SQLite foreign keys:" << query.lastError().text();
+        return false;
+    }
+
+    if (!query.next() || query.value(0).toInt() != 1) {
+        m_lastErrorMessage = QStringLiteral("Failed to enable SQLite foreign keys: PRAGMA foreign_keys is not ON");
+        qWarning().noquote() << "Failed to enable SQLite foreign keys: PRAGMA foreign_keys is not ON";
+        return false;
+    }
+
+    return true;
 }
 
 bool DatabaseManager::ensureTransactionsTable()

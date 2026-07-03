@@ -297,6 +297,33 @@ CategoryRepositoryResult CategoryRepository::deleteCategory(int id)
         };
     }
 
+    QSqlQuery budgetUsageQuery(m_database);
+    if (!budgetUsageQuery.prepare(QStringLiteral(R"(
+        SELECT COUNT(*)
+        FROM weekly_budgets
+        WHERE category_id = :id
+    )"))) {
+        const QString error = QStringLiteral("检查分类预算使用状态失败：%1").arg(budgetUsageQuery.lastError().text());
+        qWarning().noquote() << error;
+        return CategoryRepositoryResult {false, 0, error};
+    }
+
+    budgetUsageQuery.bindValue(QStringLiteral(":id"), id);
+
+    if (!budgetUsageQuery.exec() || !budgetUsageQuery.next()) {
+        const QString error = QStringLiteral("检查分类预算使用状态失败：%1").arg(budgetUsageQuery.lastError().text());
+        qWarning().noquote() << error;
+        return CategoryRepositoryResult {false, 0, error};
+    }
+
+    if (budgetUsageQuery.value(0).toInt() > 0) {
+        return CategoryRepositoryResult {
+            false,
+            0,
+            QStringLiteral("该分类已有每周预算，不能删除")
+        };
+    }
+
     QSqlQuery deleteQuery(m_database);
     if (!deleteQuery.prepare(QStringLiteral(R"(
         DELETE FROM categories
