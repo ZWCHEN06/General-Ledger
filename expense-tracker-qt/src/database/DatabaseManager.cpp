@@ -258,6 +258,10 @@ bool DatabaseManager::migrateDatabase()
         return false;
     }
 
+    if (version < 7 && !migrateToVersion7()) {
+        return false;
+    }
+
     return true;
 }
 
@@ -455,6 +459,40 @@ bool DatabaseManager::migrateToVersion6()
 
     if (!m_database.commit()) {
         m_lastErrorMessage = QStringLiteral("Failed to commit SQLite schema migration to version 6: %1")
+                                 .arg(m_database.lastError().text());
+        qWarning().noquote() << "Failed to commit SQLite schema migration:"
+                             << m_database.lastError().text();
+        rollbackMigration();
+        return false;
+    }
+
+    return true;
+}
+
+bool DatabaseManager::migrateToVersion7()
+{
+    if (!m_database.transaction()) {
+        m_lastErrorMessage = QStringLiteral("Failed to start SQLite schema migration to version 7: %1")
+                                 .arg(m_database.lastError().text());
+        qWarning().noquote() << "Failed to start SQLite schema migration transaction:"
+                             << m_database.lastError().text();
+        return false;
+    }
+
+    const auto rollbackMigration = [this]() {
+        if (!m_database.rollback()) {
+            qWarning().noquote() << "Failed to roll back SQLite schema migration:"
+                                 << m_database.lastError().text();
+        }
+    };
+
+    if (!addTransactionSubcategoryColumns() || !setUserVersion(7)) {
+        rollbackMigration();
+        return false;
+    }
+
+    if (!m_database.commit()) {
+        m_lastErrorMessage = QStringLiteral("Failed to commit SQLite schema migration to version 7: %1")
                                  .arg(m_database.lastError().text());
         qWarning().noquote() << "Failed to commit SQLite schema migration:"
                              << m_database.lastError().text();
@@ -705,6 +743,50 @@ bool DatabaseManager::addTransactionCategoryIdColumn()
         qWarning().noquote() << "Failed to add transactions.category_id:"
                              << query.lastError().text();
         return false;
+    }
+
+    return true;
+}
+
+bool DatabaseManager::addTransactionSubcategoryColumns()
+{
+    bool subcategoryIdExists = false;
+    if (!columnExists(QStringLiteral("transactions"), QStringLiteral("subcategory_id"), &subcategoryIdExists)) {
+        return false;
+    }
+
+    QSqlQuery query(m_database);
+    if (!subcategoryIdExists) {
+        const bool success = query.exec(QStringLiteral(R"(
+            ALTER TABLE transactions ADD COLUMN subcategory_id INTEGER
+        )"));
+
+        if (!success) {
+            m_lastErrorMessage = QStringLiteral("Failed to add transactions.subcategory_id during schema migration to version 7: %1")
+                                     .arg(query.lastError().text());
+            qWarning().noquote() << "Failed to add transactions.subcategory_id:"
+                                 << query.lastError().text();
+            return false;
+        }
+    }
+
+    bool subcategoryExists = false;
+    if (!columnExists(QStringLiteral("transactions"), QStringLiteral("subcategory"), &subcategoryExists)) {
+        return false;
+    }
+
+    if (!subcategoryExists) {
+        const bool success = query.exec(QStringLiteral(R"(
+            ALTER TABLE transactions ADD COLUMN subcategory TEXT
+        )"));
+
+        if (!success) {
+            m_lastErrorMessage = QStringLiteral("Failed to add transactions.subcategory during schema migration to version 7: %1")
+                                     .arg(query.lastError().text());
+            qWarning().noquote() << "Failed to add transactions.subcategory:"
+                                 << query.lastError().text();
+            return false;
+        }
     }
 
     return true;
