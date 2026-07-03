@@ -18,6 +18,18 @@ Item {
         return date.getFullYear() + "-" + pad2(date.getMonth() + 1) + "-" + pad2(date.getDate())
     }
 
+    function formatMoney(value) {
+        return Number(value).toFixed(2)
+    }
+
+    function usagePercentText() {
+        if (Number(appController.totalBudget) <= 0) {
+            return "未设置"
+        }
+
+        return Number(appController.totalUsagePercent).toFixed(2) + "%"
+    }
+
     function addDays(date, days) {
         const result = new Date(date)
         result.setDate(result.getDate() + days)
@@ -208,35 +220,73 @@ Item {
 
             Rectangle {
                 width: parent.width
-                height: 180
+                height: root.errorMessage.length > 0 ? 112 : 300
                 radius: 8
                 color: "#ffffff"
                 border.color: "#dadce0"
 
-                Column {
+                Text {
                     anchors.centerIn: parent
                     width: parent.width - 32
-                    spacing: 10
+                    text: root.errorMessage
+                    color: "#b3261e"
+                    font.pixelSize: 18
+                    font.bold: true
+                    horizontalAlignment: Text.AlignHCenter
+                    wrapMode: Text.WordWrap
+                    visible: root.errorMessage.length > 0
+                }
+
+                Column {
+                    anchors.fill: parent
+                    anchors.margins: 16
+                    spacing: 12
+                    visible: root.errorMessage.length === 0
 
                     Text {
                         width: parent.width
-                        text: root.errorMessage.length > 0 ? root.errorMessage : "每周预算已加载"
-                        color: root.errorMessage.length > 0 ? "#b3261e" : "#202124"
+                        text: "预算总览"
+                        color: "#202124"
                         font.pixelSize: 18
                         font.bold: true
-                        horizontalAlignment: Text.AlignHCenter
-                        wrapMode: Text.WordWrap
+                    }
+
+                    SummaryRow {
+                        width: parent.width
+                        title: "本周总预算"
+                        value: "¥" + root.formatMoney(appController.totalBudget)
+                        valueColor: "#1f5fbf"
+                    }
+
+                    SummaryRow {
+                        width: parent.width
+                        title: "本周实际支出"
+                        value: "¥" + root.formatMoney(appController.totalActual)
+                        valueColor: "#b3261e"
+                    }
+
+                    SummaryRow {
+                        width: parent.width
+                        title: "本周剩余"
+                        value: "¥" + root.formatMoney(appController.totalRemaining)
+                        valueColor: appController.totalRemaining < 0 ? "#b3261e" : "#1b7f45"
+                    }
+
+                    SummaryRow {
+                        width: parent.width
+                        title: "使用比例"
+                        value: root.usagePercentText()
+                        valueColor: appController.isTotalOverBudget ? "#b3261e" : "#3c4043"
                     }
 
                     Text {
                         width: parent.width
-                        text: root.errorMessage.length > 0
-                                ? "请返回后重试，或检查数据库初始化状态。"
-                                : "后续会在这里显示支出分类的预算、实际支出和剩余金额。"
-                        color: "#5f6368"
-                        font.pixelSize: 15
+                        text: "本周已超支"
+                        color: "#b3261e"
+                        font.pixelSize: 16
+                        font.bold: true
                         horizontalAlignment: Text.AlignHCenter
-                        wrapMode: Text.WordWrap
+                        visible: appController.isTotalOverBudget
                     }
                 }
             }
@@ -245,6 +295,46 @@ Item {
                 width: parent.width
                 height: root.bottomInset
             }
+        }
+    }
+
+    component SummaryRow: Rectangle {
+        id: summaryRow
+
+        required property string title
+        required property string value
+        required property color valueColor
+
+        height: 44
+        radius: 8
+        color: "#f8f9fa"
+        border.color: "#e8eaed"
+
+        Text {
+            anchors.left: parent.left
+            anchors.leftMargin: 12
+            anchors.right: valueText.left
+            anchors.rightMargin: 12
+            anchors.verticalCenter: parent.verticalCenter
+            text: summaryRow.title
+            color: "#3c4043"
+            font.pixelSize: 15
+            elide: Text.ElideRight
+        }
+
+        Text {
+            id: valueText
+
+            anchors.right: parent.right
+            anchors.rightMargin: 12
+            anchors.verticalCenter: parent.verticalCenter
+            width: Math.min(parent.width * 0.48, 160)
+            text: summaryRow.value
+            color: summaryRow.valueColor
+            font.pixelSize: 16
+            font.bold: true
+            horizontalAlignment: Text.AlignRight
+            elide: Text.ElideRight
         }
     }
 }
