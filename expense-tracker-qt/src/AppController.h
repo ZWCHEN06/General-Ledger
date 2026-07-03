@@ -58,6 +58,14 @@ public:
                                            const QString &date,
                                            const QString &note,
                                            const QVariant &categoryId);
+    Q_INVOKABLE QVariantMap addTransaction(const QString &type,
+                                           const QString &amount,
+                                           const QString &category,
+                                           const QString &date,
+                                           const QString &note,
+                                           const QVariant &categoryId,
+                                           const QVariant &subcategoryId,
+                                           const QString &subcategoryName);
     Q_INVOKABLE QVariantMap currentMonthSummary() const;
     Q_INVOKABLE QVariantMap getTransactionById(int id) const;
     Q_INVOKABLE QVariantMap updateTransaction(int id,

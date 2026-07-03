@@ -125,6 +125,8 @@ int TransactionRepository::addTransaction(const Transaction &transaction)
             amount,
             category,
             category_id,
+            subcategory_id,
+            subcategory,
             date,
             note,
             created_at,
@@ -134,6 +136,8 @@ int TransactionRepository::addTransaction(const Transaction &transaction)
             :amount,
             :category,
             :category_id,
+            :subcategory_id,
+            :subcategory,
             :date,
             :note,
             :created_at,
@@ -155,6 +159,14 @@ int TransactionRepository::addTransaction(const Transaction &transaction)
                     transaction.categoryId().has_value()
                         ? QVariant(transaction.categoryId().value())
                         : QVariant());
+    query.bindValue(QStringLiteral(":subcategory_id"),
+                    transaction.subcategoryId() > 0
+                        ? QVariant(transaction.subcategoryId())
+                        : QVariant());
+    query.bindValue(QStringLiteral(":subcategory"),
+                    transaction.subcategory().trimmed().isEmpty()
+                        ? QVariant()
+                        : QVariant(transaction.subcategory().trimmed()));
     query.bindValue(QStringLiteral(":date"), transaction.date());
     query.bindValue(QStringLiteral(":note"), transaction.note());
     query.bindValue(QStringLiteral(":created_at"), now);

@@ -505,6 +505,122 @@ QVariantMap AppController::addTransaction(const QString &type,
     };
 }
 
+QVariantMap AppController::addTransaction(const QString &type,
+                                          const QString &amount,
+                                          const QString &category,
+                                          const QString &date,
+                                          const QString &note,
+                                          const QVariant &categoryId,
+                                          const QVariant &subcategoryId,
+                                          const QString &subcategoryName)
+{
+    if (!m_databaseReady) {
+        return failureResult(effectiveDatabaseErrorMessage());
+    }
+
+    if (!m_transactionRepository) {
+        return failureResult(QStringLiteral("账单仓库未初始化"));
+    }
+
+    bool typeOk = false;
+    const TransactionType transactionType = Transaction::typeFromString(type, &typeOk);
+    if (!typeOk) {
+        return failureResult(QStringLiteral("账单类型不正确"));
+    }
+
+    bool amountOk = false;
+    const double transactionAmount = amount.trimmed().toDouble(&amountOk);
+    if (!amountOk) {
+        return failureResult(QStringLiteral("金额格式不正确"));
+    }
+
+    std::optional<int> parsedCategoryId;
+    QString categoryIdError;
+    if (!parseOptionalCategoryId(categoryId, &parsedCategoryId, &categoryIdError)) {
+        return failureResult(categoryIdError);
+    }
+
+    if (!parsedCategoryId.has_value()) {
+        return failureResult(QStringLiteral("请选择一级分类"));
+    }
+
+    if (!m_categoryRepository) {
+        return failureResult(QStringLiteral("分类仓库未初始化"));
+    }
+
+    bool categoryExists = false;
+    const QList<Category> categories = m_categoryRepository->getCategoriesByType(transactionType);
+    for (const Category &existingCategory : categories) {
+        if (existingCategory.id() == parsedCategoryId.value()) {
+            categoryExists = true;
+            break;
+        }
+    }
+
+    if (!categoryExists) {
+        return failureResult(QStringLiteral("分类ID无效"));
+    }
+
+    if (!m_subcategoryRepository) {
+        return failureResult(QStringLiteral("二级分类仓库未初始化"));
+    }
+
+    bool subcategoryIdOk = false;
+    const int parsedSubcategoryId = subcategoryId.toString().trimmed().toInt(&subcategoryIdOk);
+    if (!subcategoryIdOk || parsedSubcategoryId <= 0) {
+        return failureResult(QStringLiteral("请选择二级分类"));
+    }
+
+    const QList<Subcategory> subcategories = m_subcategoryRepository->getSubcategoryById(parsedSubcategoryId);
+    if (subcategories.isEmpty()) {
+        return failureResult(QStringLiteral("二级分类不存在"));
+    }
+
+    const Subcategory &selectedSubcategory = subcategories.first();
+    if (selectedSubcategory.categoryId() != parsedCategoryId.value()) {
+        return failureResult(QStringLiteral("二级分类不属于当前一级分类"));
+    }
+
+    const QString resolvedSubcategoryName = selectedSubcategory.name().trimmed();
+    if (resolvedSubcategoryName.isEmpty()) {
+        return failureResult(QStringLiteral("二级分类名称不能为空"));
+    }
+
+    const QString trimmedSubcategoryName = subcategoryName.trimmed();
+    if (!trimmedSubcategoryName.isEmpty() && trimmedSubcategoryName != resolvedSubcategoryName) {
+        return failureResult(QStringLiteral("二级分类名称与所选二级分类不匹配"));
+    }
+
+    Transaction transaction(
+        0,
+        transactionType,
+        transactionAmount,
+        category.trimmed(),
+        date.trimmed(),
+        note.trimmed(),
+        QString(),
+        QString(),
+        parsedCategoryId,
+        parsedSubcategoryId,
+        resolvedSubcategoryName);
+
+    QString validationError;
+    if (!transaction.validate(&validationError)) {
+        return failureResult(validationError);
+    }
+
+    const int id = m_transactionRepository->addTransaction(transaction);
+    if (id <= 0) {
+        return failureResult(QStringLiteral("保存账单失败，请稍后重试"));
+    }
+
+    return QVariantMap {
+        {QStringLiteral("success"), true},
+        {QStringLiteral("errorMessage"), QString()},
+        {QStringLiteral("id"), id}
+    };
+}
+
 QVariantMap AppController::getTransactionById(int id) const
 {
     if (!m_databaseReady) {
