@@ -20,6 +20,8 @@ qt_add_executable(expense-tracker-qt
     src/models/Category.h
     src/models/CategoryListModel.cpp
     src/models/CategoryListModel.h
+    src/models/Subcategory.cpp
+    src/models/Subcategory.h
     src/models/Transaction.cpp
     src/models/Transaction.h
     src/models/TransactionFilter.cpp
