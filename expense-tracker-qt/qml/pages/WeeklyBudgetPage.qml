@@ -16,6 +16,7 @@ Item {
     property int deletingCategoryId: -1
     property string deletingCategoryName: ""
     property string deleteErrorMessage: ""
+    property bool completed: false
     readonly property int pageMargin: Math.max(16, Math.min(24, Math.round(width * 0.05)))
     readonly property int bottomInset: Qt.platform.os === "android" ? 72 : pageMargin
 
@@ -29,6 +30,14 @@ Item {
 
     function formatMoney(value) {
         return Number(value).toFixed(2)
+    }
+
+    function resultErrorMessage(result, fallbackMessage) {
+        if (result && result.errorMessage && result.errorMessage.length > 0) {
+            return result.errorMessage
+        }
+
+        return fallbackMessage
     }
 
     function usagePercentText() {
@@ -73,10 +82,8 @@ Item {
 
     function loadWeeklyBudget() {
         const result = appController.loadWeeklyBudget(root.currentWeekStartText())
-        if (!result.success) {
-            root.errorMessage = result.errorMessage.length > 0
-                    ? result.errorMessage
-                    : "加载每周预算失败"
+        if (!result || !result.success) {
+            root.errorMessage = root.resultErrorMessage(result, "加载每周预算失败")
             return
         }
 
@@ -137,10 +144,8 @@ Item {
                     root.currentWeekStartText(),
                     root.editingCategoryId,
                     amount)
-        if (!result.success) {
-            root.budgetDialogError = result.errorMessage.length > 0
-                    ? result.errorMessage
-                    : "保存预算失败"
+        if (!result || !result.success) {
+            root.budgetDialogError = root.resultErrorMessage(result, "保存预算失败")
             return
         }
 
@@ -172,10 +177,8 @@ Item {
         const result = appController.deleteWeeklyBudget(
                     root.currentWeekStartText(),
                     root.deletingCategoryId)
-        if (!result.success) {
-            root.deleteErrorMessage = result.errorMessage.length > 0
-                    ? result.errorMessage
-                    : "删除预算失败"
+        if (!result || !result.success) {
+            root.deleteErrorMessage = root.resultErrorMessage(result, "删除预算失败")
             return
         }
 
@@ -183,7 +186,16 @@ Item {
         root.loadWeeklyBudget()
     }
 
-    Component.onCompleted: root.loadWeeklyBudget()
+    Component.onCompleted: {
+        root.completed = true
+        root.loadWeeklyBudget()
+    }
+
+    onVisibleChanged: {
+        if (visible && root.completed) {
+            root.loadWeeklyBudget()
+        }
+    }
 
     Flickable {
         id: budgetFlickable
