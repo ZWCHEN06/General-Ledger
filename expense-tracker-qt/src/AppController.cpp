@@ -7,9 +7,12 @@
 #include "models/WeeklyBudgetListModel.h"
 #include "repositories/CategoryRepository.h"
 #include "repositories/TransactionRepository.h"
+#include "repositories/WeeklyBudgetRepository.h"
 #include "services/CategorySummaryService.h"
 #include "services/CsvExportService.h"
 #include "services/SummaryService.h"
+#include "services/WeeklyBudgetService.h"
+#include "utils/WeekUtils.h"
 
 #include <QDate>
 #include <QDateTime>
@@ -257,6 +260,31 @@ WeeklyBudgetListModel *AppController::weeklyBudgetListModel() const
     return m_weeklyBudgetListModel;
 }
 
+double AppController::totalBudget() const
+{
+    return m_weeklyBudgetSummary.totalBudget;
+}
+
+double AppController::totalActual() const
+{
+    return m_weeklyBudgetSummary.totalActual;
+}
+
+double AppController::totalRemaining() const
+{
+    return m_weeklyBudgetSummary.totalRemaining;
+}
+
+double AppController::totalUsagePercent() const
+{
+    return m_weeklyBudgetSummary.totalUsagePercent;
+}
+
+bool AppController::isTotalOverBudget() const
+{
+    return m_weeklyBudgetSummary.isTotalOverBudget;
+}
+
 void AppController::setDatabaseStatus(bool ready, const QString &errorMessage)
 {
     if (m_databaseReady == ready && m_databaseErrorMessage == errorMessage) {
@@ -286,6 +314,11 @@ void AppController::setCategoryListModel(CategoryListModel *categoryListModel)
 void AppController::setWeeklyBudgetListModel(WeeklyBudgetListModel *weeklyBudgetListModel)
 {
     m_weeklyBudgetListModel = weeklyBudgetListModel;
+}
+
+void AppController::setWeeklyBudgetRepository(WeeklyBudgetRepository *weeklyBudgetRepository)
+{
+    m_weeklyBudgetRepository = weeklyBudgetRepository;
 }
 
 QString AppController::effectiveDatabaseErrorMessage() const
@@ -883,4 +916,66 @@ QVariantMap AppController::deleteCategory(int id)
     }
 
     return categoryRepositoryResultToMap(result);
+}
+
+QVariantMap AppController::loadWeeklyBudget(const QString &weekStartDate)
+{
+    if (!m_databaseReady) {
+        return failureResult(effectiveDatabaseErrorMessage());
+    }
+
+    if (!m_categoryRepository) {
+        return failureResult(QStringLiteral("分类仓库未初始化"));
+    }
+
+    if (!m_transactionRepository) {
+        return failureResult(QStringLiteral("账单仓库未初始化"));
+    }
+
+    if (!m_weeklyBudgetRepository) {
+        return failureResult(QStringLiteral("每周预算仓库未初始化"));
+    }
+
+    if (!m_weeklyBudgetListModel) {
+        return failureResult(QStringLiteral("每周预算列表模型未初始化"));
+    }
+
+    const QString trimmedWeekStartDate = weekStartDate.trimmed();
+    const QDate parsedWeekStartDate = WeekUtils::parseDate(trimmedWeekStartDate);
+    if (!parsedWeekStartDate.isValid()) {
+        return failureResult(QStringLiteral("周开始日期必须是合法的 YYYY-MM-DD 格式"));
+    }
+
+    if (!WeekUtils::isWeekStartDate(parsedWeekStartDate)) {
+        return failureResult(QStringLiteral("周开始日期必须是周一"));
+    }
+
+    const QDate weekEndDate = WeekUtils::getWeekEndDate(parsedWeekStartDate);
+    const QString formattedWeekEndDate = WeekUtils::formatDate(weekEndDate);
+
+    const QList<Category> expenseCategories = m_categoryRepository->getCategoriesByType(TransactionType::Expense);
+    const QList<WeeklyBudget> budgets = m_weeklyBudgetRepository->getBudgetsByWeek(trimmedWeekStartDate);
+    const QHash<int, double> actualExpensesByCategory =
+        m_transactionRepository->getWeeklyExpenseByCategory(trimmedWeekStartDate, formattedWeekEndDate);
+
+    const WeeklyBudgetService weeklyBudgetService;
+    const QList<WeeklyBudgetComparisonItem> items =
+        weeklyBudgetService.calculate(expenseCategories, budgets, actualExpensesByCategory);
+    const WeeklyBudgetSummary summary = weeklyBudgetService.summarize(items);
+
+    m_weeklyBudgetListModel->setItems(items);
+    m_weeklyBudgetSummary = summary;
+    emit weeklyBudgetSummaryChanged();
+
+    return QVariantMap {
+        {QStringLiteral("success"), true},
+        {QStringLiteral("errorMessage"), QString()},
+        {QStringLiteral("weekStartDate"), trimmedWeekStartDate},
+        {QStringLiteral("weekEndDate"), formattedWeekEndDate},
+        {QStringLiteral("totalBudget"), m_weeklyBudgetSummary.totalBudget},
+        {QStringLiteral("totalActual"), m_weeklyBudgetSummary.totalActual},
+        {QStringLiteral("totalRemaining"), m_weeklyBudgetSummary.totalRemaining},
+        {QStringLiteral("totalUsagePercent"), m_weeklyBudgetSummary.totalUsagePercent},
+        {QStringLiteral("isTotalOverBudget"), m_weeklyBudgetSummary.isTotalOverBudget}
+    };
 }

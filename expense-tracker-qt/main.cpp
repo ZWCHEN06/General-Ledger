@@ -5,6 +5,7 @@
 #include "src/models/WeeklyBudgetListModel.h"
 #include "src/repositories/CategoryRepository.h"
 #include "src/repositories/TransactionRepository.h"
+#include "src/repositories/WeeklyBudgetRepository.h"
 
 #include <QDebug>
 #include <QGuiApplication>
@@ -44,6 +45,7 @@ int main(int argc, char *argv[])
     QQmlApplicationEngine engine;
     TransactionRepository transactionRepository(databaseManager.database());
     CategoryRepository categoryRepository(databaseManager.database());
+    WeeklyBudgetRepository weeklyBudgetRepository(databaseManager.database());
     AppController appController(&transactionRepository);
     appController.setDatabaseStatus(databaseReady, databaseErrorMessage);
 
@@ -54,6 +56,7 @@ int main(int argc, char *argv[])
     appController.setCategoryRepository(&categoryRepository);
     appController.setCategoryListModel(&categoryListModel);
     appController.setWeeklyBudgetListModel(&weeklyBudgetListModel);
+    appController.setWeeklyBudgetRepository(&weeklyBudgetRepository);
     engine.rootContext()->setContextProperty(QStringLiteral("appController"), &appController);
     engine.rootContext()->setContextProperty(QStringLiteral("transactionListModel"), &transactionListModel);
     engine.rootContext()->setContextProperty(QStringLiteral("categoryListModel"), &categoryListModel);

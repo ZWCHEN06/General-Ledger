@@ -12,6 +12,7 @@ class CategoryListModel;
 class CategoryRepository;
 class TransactionListModel;
 class TransactionRepository;
+class WeeklyBudgetRepository;
 
 class AppController : public QObject
 {
@@ -20,6 +21,11 @@ class AppController : public QObject
     Q_PROPERTY(QString databaseErrorMessage READ databaseErrorMessage NOTIFY databaseStatusChanged)
     Q_PROPERTY(bool transactionFilterActive READ transactionFilterActive NOTIFY transactionFilterChanged)
     Q_PROPERTY(WeeklyBudgetListModel* weeklyBudgetListModel READ weeklyBudgetListModel CONSTANT)
+    Q_PROPERTY(double totalBudget READ totalBudget NOTIFY weeklyBudgetSummaryChanged)
+    Q_PROPERTY(double totalActual READ totalActual NOTIFY weeklyBudgetSummaryChanged)
+    Q_PROPERTY(double totalRemaining READ totalRemaining NOTIFY weeklyBudgetSummaryChanged)
+    Q_PROPERTY(double totalUsagePercent READ totalUsagePercent NOTIFY weeklyBudgetSummaryChanged)
+    Q_PROPERTY(bool isTotalOverBudget READ isTotalOverBudget NOTIFY weeklyBudgetSummaryChanged)
 
 public:
     explicit AppController(QObject *parent = nullptr);
@@ -29,6 +35,11 @@ public:
     QString databaseErrorMessage() const;
     bool transactionFilterActive() const;
     WeeklyBudgetListModel *weeklyBudgetListModel() const;
+    double totalBudget() const;
+    double totalActual() const;
+    double totalRemaining() const;
+    double totalUsagePercent() const;
+    bool isTotalOverBudget() const;
     void setDatabaseStatus(bool ready, const QString &errorMessage);
 
     Q_INVOKABLE QString testMessage() const;
@@ -75,15 +86,18 @@ public:
     Q_INVOKABLE QVariantMap addCategory(const QString &name, const QString &type);
     Q_INVOKABLE QVariantMap updateCategory(int id, const QString &name);
     Q_INVOKABLE QVariantMap deleteCategory(int id);
+    Q_INVOKABLE QVariantMap loadWeeklyBudget(const QString &weekStartDate);
 
     void setTransactionListModel(TransactionListModel *transactionListModel);
     void setCategoryRepository(CategoryRepository *categoryRepository);
     void setCategoryListModel(CategoryListModel *categoryListModel);
     void setWeeklyBudgetListModel(WeeklyBudgetListModel *weeklyBudgetListModel);
+    void setWeeklyBudgetRepository(WeeklyBudgetRepository *weeklyBudgetRepository);
 
 signals:
     void databaseStatusChanged();
     void transactionFilterChanged();
+    void weeklyBudgetSummaryChanged();
 
 private:
     QString effectiveDatabaseErrorMessage() const;
@@ -93,6 +107,8 @@ private:
     CategoryRepository *m_categoryRepository = nullptr;
     CategoryListModel *m_categoryListModel = nullptr;
     WeeklyBudgetListModel *m_weeklyBudgetListModel = nullptr;
+    WeeklyBudgetRepository *m_weeklyBudgetRepository = nullptr;
+    WeeklyBudgetSummary m_weeklyBudgetSummary;
     TransactionFilter m_transactionFilter;
     bool m_transactionFilterActive = false;
     bool m_databaseReady = true;
