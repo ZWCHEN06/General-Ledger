@@ -28,6 +28,7 @@ Window {
             onAddTransactionRequested: pageLoader.sourceComponent = addTransactionPageComponent
             onTransactionListRequested: pageLoader.sourceComponent = transactionListPageComponent
             onCategorySummaryRequested: pageLoader.sourceComponent = categorySummaryPageComponent
+            onWeeklyBudgetRequested: pageLoader.sourceComponent = weeklyBudgetPageComponent
             onSettingsRequested: pageLoader.sourceComponent = settingsPageComponent
         }
     }
@@ -74,6 +75,14 @@ Window {
         id: categorySummaryPageComponent
 
         CategorySummaryPage {
+            onBackRequested: pageLoader.sourceComponent = homePageComponent
+        }
+    }
+
+    Component {
+        id: weeklyBudgetPageComponent
+
+        WeeklyBudgetPage {
             onBackRequested: pageLoader.sourceComponent = homePageComponent
         }
     }

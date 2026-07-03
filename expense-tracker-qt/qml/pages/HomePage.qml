@@ -6,6 +6,7 @@ Item {
     signal addTransactionRequested()
     signal transactionListRequested()
     signal categorySummaryRequested()
+    signal weeklyBudgetRequested()
     signal settingsRequested()
 
     property real monthlyIncome: 0.00
@@ -133,6 +134,13 @@ Item {
             height: 46
             text: "分类统计"
             onClicked: root.categorySummaryRequested()
+        }
+
+        NavigationButton {
+            width: parent.width
+            height: 46
+            text: "本周预算"
+            onClicked: root.weeklyBudgetRequested()
         }
         }
     }
