@@ -1,11 +1,13 @@
 #include "AppController.h"
 
 #include "models/CategoryListModel.h"
+#include "models/SubcategoryListModel.h"
 #include "models/Transaction.h"
 #include "models/TransactionFilter.h"
 #include "models/TransactionListModel.h"
 #include "models/WeeklyBudgetListModel.h"
 #include "repositories/CategoryRepository.h"
+#include "repositories/SubcategoryRepository.h"
 #include "repositories/TransactionRepository.h"
 #include "repositories/WeeklyBudgetRepository.h"
 #include "services/CategorySummaryService.h"
@@ -44,6 +46,15 @@ QVariantMap successResult(bool filterActive = false)
 }
 
 QVariantMap categoryRepositoryResultToMap(const CategoryRepositoryResult &result)
+{
+    return QVariantMap {
+        {QStringLiteral("success"), result.success},
+        {QStringLiteral("errorMessage"), result.errorMessage},
+        {QStringLiteral("id"), result.id}
+    };
+}
+
+QVariantMap subcategoryRepositoryResultToMap(const SubcategoryRepositoryResult &result)
 {
     return QVariantMap {
         {QStringLiteral("success"), result.success},
@@ -310,6 +321,11 @@ bool AppController::transactionFilterActive() const
     return m_transactionFilterActive;
 }
 
+SubcategoryListModel *AppController::subcategoryListModel() const
+{
+    return m_subcategoryListModel;
+}
+
 WeeklyBudgetListModel *AppController::weeklyBudgetListModel() const
 {
     return m_weeklyBudgetListModel;
@@ -364,6 +380,16 @@ void AppController::setCategoryRepository(CategoryRepository *categoryRepository
 void AppController::setCategoryListModel(CategoryListModel *categoryListModel)
 {
     m_categoryListModel = categoryListModel;
+}
+
+void AppController::setSubcategoryRepository(SubcategoryRepository *subcategoryRepository)
+{
+    m_subcategoryRepository = subcategoryRepository;
+}
+
+void AppController::setSubcategoryListModel(SubcategoryListModel *subcategoryListModel)
+{
+    m_subcategoryListModel = subcategoryListModel;
 }
 
 void AppController::setWeeklyBudgetListModel(WeeklyBudgetListModel *weeklyBudgetListModel)
@@ -971,6 +997,110 @@ QVariantMap AppController::deleteCategory(int id)
     }
 
     return categoryRepositoryResultToMap(result);
+}
+
+QVariantMap AppController::refreshSubcategories(int categoryId)
+{
+    if (!m_databaseReady) {
+        return failureResult(effectiveDatabaseErrorMessage());
+    }
+
+    if (!m_subcategoryRepository) {
+        return failureResult(QStringLiteral("二级分类仓库未初始化"));
+    }
+
+    if (!m_subcategoryListModel) {
+        return failureResult(QStringLiteral("二级分类列表模型未初始化"));
+    }
+
+    if (categoryId <= 0) {
+        return failureResult(QStringLiteral("一级分类 id 必须大于 0"));
+    }
+
+    m_subcategoryListModel->refresh(categoryId);
+    return QVariantMap {
+        {QStringLiteral("success"), true},
+        {QStringLiteral("errorMessage"), QString()},
+        {QStringLiteral("id"), categoryId}
+    };
+}
+
+QVariantMap AppController::addSubcategory(int categoryId, const QString &name)
+{
+    if (!m_databaseReady) {
+        return failureResult(effectiveDatabaseErrorMessage());
+    }
+
+    if (!m_subcategoryRepository) {
+        return failureResult(QStringLiteral("二级分类仓库未初始化"));
+    }
+
+    if (!m_subcategoryListModel) {
+        return failureResult(QStringLiteral("二级分类列表模型未初始化"));
+    }
+
+    const SubcategoryRepositoryResult result = m_subcategoryRepository->addSubcategory(categoryId, name);
+    if (result.success) {
+        m_subcategoryListModel->refresh(categoryId);
+    }
+
+    return subcategoryRepositoryResultToMap(result);
+}
+
+QVariantMap AppController::updateSubcategory(int id, const QString &name)
+{
+    if (!m_databaseReady) {
+        return failureResult(effectiveDatabaseErrorMessage());
+    }
+
+    if (!m_subcategoryRepository) {
+        return failureResult(QStringLiteral("二级分类仓库未初始化"));
+    }
+
+    if (!m_subcategoryListModel) {
+        return failureResult(QStringLiteral("二级分类列表模型未初始化"));
+    }
+
+    const QList<Subcategory> subcategories = m_subcategoryRepository->getSubcategoryById(id);
+    if (subcategories.isEmpty()) {
+        return failureResult(QStringLiteral("二级分类不存在"));
+    }
+
+    const int categoryId = subcategories.first().categoryId();
+    const SubcategoryRepositoryResult result = m_subcategoryRepository->updateSubcategoryName(id, name);
+    if (result.success) {
+        m_subcategoryListModel->refresh(categoryId);
+    }
+
+    return subcategoryRepositoryResultToMap(result);
+}
+
+QVariantMap AppController::deleteSubcategory(int id)
+{
+    if (!m_databaseReady) {
+        return failureResult(effectiveDatabaseErrorMessage());
+    }
+
+    if (!m_subcategoryRepository) {
+        return failureResult(QStringLiteral("二级分类仓库未初始化"));
+    }
+
+    if (!m_subcategoryListModel) {
+        return failureResult(QStringLiteral("二级分类列表模型未初始化"));
+    }
+
+    const QList<Subcategory> subcategories = m_subcategoryRepository->getSubcategoryById(id);
+    if (subcategories.isEmpty()) {
+        return failureResult(QStringLiteral("二级分类不存在"));
+    }
+
+    const int categoryId = subcategories.first().categoryId();
+    const SubcategoryRepositoryResult result = m_subcategoryRepository->deleteSubcategory(id);
+    if (result.success) {
+        m_subcategoryListModel->refresh(categoryId);
+    }
+
+    return subcategoryRepositoryResultToMap(result);
 }
 
 QVariantMap AppController::loadWeeklyBudget(const QString &weekStartDate)

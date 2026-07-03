@@ -1,6 +1,7 @@
 #pragma once
 
 #include "models/TransactionFilter.h"
+#include "models/SubcategoryListModel.h"
 #include "models/WeeklyBudgetListModel.h"
 
 #include <QObject>
@@ -10,6 +11,7 @@
 
 class CategoryListModel;
 class CategoryRepository;
+class SubcategoryRepository;
 class TransactionListModel;
 class TransactionRepository;
 class WeeklyBudgetRepository;
@@ -20,6 +22,7 @@ class AppController : public QObject
     Q_PROPERTY(bool databaseReady READ databaseReady NOTIFY databaseStatusChanged)
     Q_PROPERTY(QString databaseErrorMessage READ databaseErrorMessage NOTIFY databaseStatusChanged)
     Q_PROPERTY(bool transactionFilterActive READ transactionFilterActive NOTIFY transactionFilterChanged)
+    Q_PROPERTY(SubcategoryListModel* subcategoryListModel READ subcategoryListModel CONSTANT)
     Q_PROPERTY(WeeklyBudgetListModel* weeklyBudgetListModel READ weeklyBudgetListModel CONSTANT)
     Q_PROPERTY(double totalBudget READ totalBudget NOTIFY weeklyBudgetSummaryChanged)
     Q_PROPERTY(double totalActual READ totalActual NOTIFY weeklyBudgetSummaryChanged)
@@ -34,6 +37,7 @@ public:
     bool databaseReady() const;
     QString databaseErrorMessage() const;
     bool transactionFilterActive() const;
+    SubcategoryListModel *subcategoryListModel() const;
     WeeklyBudgetListModel *weeklyBudgetListModel() const;
     double totalBudget() const;
     double totalActual() const;
@@ -86,6 +90,10 @@ public:
     Q_INVOKABLE QVariantMap addCategory(const QString &name, const QString &type);
     Q_INVOKABLE QVariantMap updateCategory(int id, const QString &name);
     Q_INVOKABLE QVariantMap deleteCategory(int id);
+    Q_INVOKABLE QVariantMap refreshSubcategories(int categoryId);
+    Q_INVOKABLE QVariantMap addSubcategory(int categoryId, const QString &name);
+    Q_INVOKABLE QVariantMap updateSubcategory(int id, const QString &name);
+    Q_INVOKABLE QVariantMap deleteSubcategory(int id);
     Q_INVOKABLE QVariantMap loadWeeklyBudget(const QString &weekStartDate);
     Q_INVOKABLE QVariantMap setWeeklyBudget(const QString &weekStartDate,
                                             int categoryId,
@@ -95,6 +103,8 @@ public:
     void setTransactionListModel(TransactionListModel *transactionListModel);
     void setCategoryRepository(CategoryRepository *categoryRepository);
     void setCategoryListModel(CategoryListModel *categoryListModel);
+    void setSubcategoryRepository(SubcategoryRepository *subcategoryRepository);
+    void setSubcategoryListModel(SubcategoryListModel *subcategoryListModel);
     void setWeeklyBudgetListModel(WeeklyBudgetListModel *weeklyBudgetListModel);
     void setWeeklyBudgetRepository(WeeklyBudgetRepository *weeklyBudgetRepository);
 
@@ -110,6 +120,8 @@ private:
     TransactionListModel *m_transactionListModel = nullptr;
     CategoryRepository *m_categoryRepository = nullptr;
     CategoryListModel *m_categoryListModel = nullptr;
+    SubcategoryRepository *m_subcategoryRepository = nullptr;
+    SubcategoryListModel *m_subcategoryListModel = nullptr;
     WeeklyBudgetListModel *m_weeklyBudgetListModel = nullptr;
     WeeklyBudgetRepository *m_weeklyBudgetRepository = nullptr;
     WeeklyBudgetSummary m_weeklyBudgetSummary;

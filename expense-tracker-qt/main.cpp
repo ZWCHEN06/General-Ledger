@@ -1,9 +1,11 @@
 #include "src/AppController.h"
 #include "src/database/DatabaseManager.h"
 #include "src/models/CategoryListModel.h"
+#include "src/models/SubcategoryListModel.h"
 #include "src/models/TransactionListModel.h"
 #include "src/models/WeeklyBudgetListModel.h"
 #include "src/repositories/CategoryRepository.h"
+#include "src/repositories/SubcategoryRepository.h"
 #include "src/repositories/TransactionRepository.h"
 #include "src/repositories/WeeklyBudgetRepository.h"
 
@@ -45,21 +47,26 @@ int main(int argc, char *argv[])
     QQmlApplicationEngine engine;
     TransactionRepository transactionRepository(databaseManager.database());
     CategoryRepository categoryRepository(databaseManager.database());
+    SubcategoryRepository subcategoryRepository(databaseManager.database());
     WeeklyBudgetRepository weeklyBudgetRepository(databaseManager.database());
     AppController appController(&transactionRepository);
     appController.setDatabaseStatus(databaseReady, databaseErrorMessage);
 
     TransactionListModel transactionListModel(&transactionRepository);
     CategoryListModel categoryListModel(&categoryRepository);
+    SubcategoryListModel subcategoryListModel(&subcategoryRepository);
     WeeklyBudgetListModel weeklyBudgetListModel;
     appController.setTransactionListModel(&transactionListModel);
     appController.setCategoryRepository(&categoryRepository);
     appController.setCategoryListModel(&categoryListModel);
+    appController.setSubcategoryRepository(&subcategoryRepository);
+    appController.setSubcategoryListModel(&subcategoryListModel);
     appController.setWeeklyBudgetListModel(&weeklyBudgetListModel);
     appController.setWeeklyBudgetRepository(&weeklyBudgetRepository);
     engine.rootContext()->setContextProperty(QStringLiteral("appController"), &appController);
     engine.rootContext()->setContextProperty(QStringLiteral("transactionListModel"), &transactionListModel);
     engine.rootContext()->setContextProperty(QStringLiteral("categoryListModel"), &categoryListModel);
+    engine.rootContext()->setContextProperty(QStringLiteral("subcategoryListModel"), &subcategoryListModel);
 
     QObject::connect(
         &engine,
