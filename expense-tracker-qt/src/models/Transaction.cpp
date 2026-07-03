@@ -12,12 +12,16 @@ Transaction::Transaction(int id,
                          const QString &note,
                          const QString &createdAt,
                          const QString &updatedAt,
-                         std::optional<int> categoryId)
+                         std::optional<int> categoryId,
+                         int subcategoryId,
+                         const QString &subcategory)
     : m_id(id),
       m_type(type),
       m_amount(amount),
       m_category(category),
       m_categoryId(categoryId),
+      m_subcategoryId(subcategoryId),
+      m_subcategory(subcategory),
       m_date(date),
       m_note(note),
       m_createdAt(createdAt),
@@ -166,6 +170,26 @@ void Transaction::setCategoryId(int categoryId)
 void Transaction::clearCategoryId()
 {
     m_categoryId = std::nullopt;
+}
+
+int Transaction::subcategoryId() const
+{
+    return m_subcategoryId;
+}
+
+void Transaction::setSubcategoryId(int subcategoryId)
+{
+    m_subcategoryId = subcategoryId;
+}
+
+QString Transaction::subcategory() const
+{
+    return m_subcategory;
+}
+
+void Transaction::setSubcategory(const QString &subcategory)
+{
+    m_subcategory = subcategory;
 }
 
 QString Transaction::date() const

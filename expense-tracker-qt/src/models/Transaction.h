@@ -20,7 +20,9 @@ public:
                 const QString &note,
                 const QString &createdAt,
                 const QString &updatedAt,
-                std::optional<int> categoryId = std::nullopt);
+                std::optional<int> categoryId = std::nullopt,
+                int subcategoryId = -1,
+                const QString &subcategory = QString());
 
     static QString typeToString(TransactionType type);
     static TransactionType typeFromString(const QString &type,
@@ -46,6 +48,12 @@ public:
     void setCategoryId(int categoryId);
     void clearCategoryId();
 
+    int subcategoryId() const;
+    void setSubcategoryId(int subcategoryId);
+
+    QString subcategory() const;
+    void setSubcategory(const QString &subcategory);
+
     QString date() const;
     void setDate(const QString &date);
 
@@ -64,6 +72,8 @@ private:
     double m_amount = 0.0;
     QString m_category;
     std::optional<int> m_categoryId;
+    int m_subcategoryId = -1;
+    QString m_subcategory;
     QString m_date;
     QString m_note;
     QString m_createdAt;
