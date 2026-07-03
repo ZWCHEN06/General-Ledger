@@ -87,6 +87,10 @@ public:
     Q_INVOKABLE QVariantMap updateCategory(int id, const QString &name);
     Q_INVOKABLE QVariantMap deleteCategory(int id);
     Q_INVOKABLE QVariantMap loadWeeklyBudget(const QString &weekStartDate);
+    Q_INVOKABLE QVariantMap setWeeklyBudget(const QString &weekStartDate,
+                                            int categoryId,
+                                            const QVariant &amount);
+    Q_INVOKABLE QVariantMap deleteWeeklyBudget(const QString &weekStartDate, int categoryId);
 
     void setTransactionListModel(TransactionListModel *transactionListModel);
     void setCategoryRepository(CategoryRepository *categoryRepository);

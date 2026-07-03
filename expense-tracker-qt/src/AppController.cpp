@@ -138,6 +138,37 @@ bool parseOptionalAmount(const QVariant &value,
     return true;
 }
 
+bool parseRequiredBudgetAmount(const QVariant &value, double *output, QString *errorMessage)
+{
+    if (isEmptyOptionalValue(value)) {
+        if (errorMessage) {
+            *errorMessage = QStringLiteral("预算金额不能为空");
+        }
+        return false;
+    }
+
+    bool ok = false;
+    const double parsedValue = value.toString().trimmed().toDouble(&ok);
+    if (!ok) {
+        if (errorMessage) {
+            *errorMessage = QStringLiteral("预算金额格式不正确");
+        }
+        return false;
+    }
+
+    if (parsedValue < 0.0) {
+        if (errorMessage) {
+            *errorMessage = QStringLiteral("预算金额不能小于 0");
+        }
+        return false;
+    }
+
+    if (output) {
+        *output = parsedValue;
+    }
+    return true;
+}
+
 bool parseOptionalCategoryId(const QVariant &value, std::optional<int> *output, QString *errorMessage)
 {
     if (output) {
@@ -159,6 +190,30 @@ bool parseOptionalCategoryId(const QVariant &value, std::optional<int> *output, 
 
     if (output) {
         *output = parsedValue;
+    }
+    return true;
+}
+
+bool parseRequiredWeekStartDate(const QString &weekStartDate, QDate *output, QString *errorMessage)
+{
+    const QString trimmedWeekStartDate = weekStartDate.trimmed();
+    const QDate parsedWeekStartDate = WeekUtils::parseDate(trimmedWeekStartDate);
+    if (!parsedWeekStartDate.isValid()) {
+        if (errorMessage) {
+            *errorMessage = QStringLiteral("周开始日期必须是合法的 YYYY-MM-DD 格式");
+        }
+        return false;
+    }
+
+    if (!WeekUtils::isWeekStartDate(parsedWeekStartDate)) {
+        if (errorMessage) {
+            *errorMessage = QStringLiteral("周开始日期必须是周一");
+        }
+        return false;
+    }
+
+    if (output) {
+        *output = parsedWeekStartDate;
     }
     return true;
 }
@@ -941,13 +996,10 @@ QVariantMap AppController::loadWeeklyBudget(const QString &weekStartDate)
     }
 
     const QString trimmedWeekStartDate = weekStartDate.trimmed();
-    const QDate parsedWeekStartDate = WeekUtils::parseDate(trimmedWeekStartDate);
-    if (!parsedWeekStartDate.isValid()) {
-        return failureResult(QStringLiteral("周开始日期必须是合法的 YYYY-MM-DD 格式"));
-    }
-
-    if (!WeekUtils::isWeekStartDate(parsedWeekStartDate)) {
-        return failureResult(QStringLiteral("周开始日期必须是周一"));
+    QDate parsedWeekStartDate;
+    QString validationError;
+    if (!parseRequiredWeekStartDate(trimmedWeekStartDate, &parsedWeekStartDate, &validationError)) {
+        return failureResult(validationError);
     }
 
     const QDate weekEndDate = WeekUtils::getWeekEndDate(parsedWeekStartDate);
@@ -978,4 +1030,100 @@ QVariantMap AppController::loadWeeklyBudget(const QString &weekStartDate)
         {QStringLiteral("totalUsagePercent"), m_weeklyBudgetSummary.totalUsagePercent},
         {QStringLiteral("isTotalOverBudget"), m_weeklyBudgetSummary.isTotalOverBudget}
     };
+}
+
+QVariantMap AppController::setWeeklyBudget(const QString &weekStartDate,
+                                           int categoryId,
+                                           const QVariant &amount)
+{
+    if (!m_databaseReady) {
+        return failureResult(effectiveDatabaseErrorMessage());
+    }
+
+    if (!m_categoryRepository) {
+        return failureResult(QStringLiteral("分类仓库未初始化"));
+    }
+
+    if (!m_weeklyBudgetRepository) {
+        return failureResult(QStringLiteral("每周预算仓库未初始化"));
+    }
+
+    const QString trimmedWeekStartDate = weekStartDate.trimmed();
+    QDate parsedWeekStartDate;
+    QString validationError;
+    if (!parseRequiredWeekStartDate(trimmedWeekStartDate, &parsedWeekStartDate, &validationError)) {
+        return failureResult(validationError);
+    }
+
+    if (categoryId <= 0) {
+        return failureResult(QStringLiteral("分类 id 必须大于 0"));
+    }
+
+    double parsedAmount = 0.0;
+    if (!parseRequiredBudgetAmount(amount, &parsedAmount, &validationError)) {
+        return failureResult(validationError);
+    }
+
+    bool expenseCategoryExists = false;
+    const QList<Category> expenseCategories = m_categoryRepository->getCategoriesByType(TransactionType::Expense);
+    for (const Category &category : expenseCategories) {
+        if (category.id() == categoryId) {
+            expenseCategoryExists = true;
+            break;
+        }
+    }
+
+    if (!expenseCategoryExists) {
+        return failureResult(QStringLiteral("只能为支出分类设置预算"));
+    }
+
+    const WeeklyBudgetRepositoryResult result =
+        m_weeklyBudgetRepository->upsertBudget(trimmedWeekStartDate, categoryId, parsedAmount);
+    if (!result.success) {
+        return failureResult(result.errorMessage);
+    }
+
+    QVariantMap loadResult = loadWeeklyBudget(trimmedWeekStartDate);
+    if (!loadResult.value(QStringLiteral("success")).toBool()) {
+        return loadResult;
+    }
+
+    loadResult.insert(QStringLiteral("id"), result.id);
+    return loadResult;
+}
+
+QVariantMap AppController::deleteWeeklyBudget(const QString &weekStartDate, int categoryId)
+{
+    if (!m_databaseReady) {
+        return failureResult(effectiveDatabaseErrorMessage());
+    }
+
+    if (!m_weeklyBudgetRepository) {
+        return failureResult(QStringLiteral("每周预算仓库未初始化"));
+    }
+
+    const QString trimmedWeekStartDate = weekStartDate.trimmed();
+    QDate parsedWeekStartDate;
+    QString validationError;
+    if (!parseRequiredWeekStartDate(trimmedWeekStartDate, &parsedWeekStartDate, &validationError)) {
+        return failureResult(validationError);
+    }
+
+    if (categoryId <= 0) {
+        return failureResult(QStringLiteral("分类 id 必须大于 0"));
+    }
+
+    const WeeklyBudgetRepositoryResult result =
+        m_weeklyBudgetRepository->deleteBudget(trimmedWeekStartDate, categoryId);
+    if (!result.success) {
+        return failureResult(result.errorMessage);
+    }
+
+    QVariantMap loadResult = loadWeeklyBudget(trimmedWeekStartDate);
+    if (!loadResult.value(QStringLiteral("success")).toBool()) {
+        return loadResult;
+    }
+
+    loadResult.insert(QStringLiteral("id"), result.id);
+    return loadResult;
 }
