@@ -30,6 +30,14 @@ Item {
         return Number(appController.totalUsagePercent).toFixed(2) + "%"
     }
 
+    function itemUsagePercentText(hasBudget, usagePercent) {
+        if (!hasBudget) {
+            return "未设置预算"
+        }
+
+        return Number(usagePercent).toFixed(2) + "%"
+    }
+
     function addDays(date, days) {
         const result = new Date(date)
         result.setDate(result.getDate() + days)
@@ -291,6 +299,121 @@ Item {
                 }
             }
 
+            Text {
+                width: parent.width
+                text: "分类预算"
+                color: "#202124"
+                font.pixelSize: 18
+                font.bold: true
+                visible: root.errorMessage.length === 0
+            }
+
+            ListView {
+                id: categoryBudgetListView
+
+                width: parent.width
+                height: contentHeight
+                spacing: 10
+                interactive: false
+                boundsBehavior: Flickable.StopAtBounds
+                model: appController.weeklyBudgetListModel
+                visible: root.errorMessage.length === 0
+
+                delegate: Rectangle {
+                    id: budgetItem
+
+                    required property string categoryName
+                    required property real budgetAmount
+                    required property real actualAmount
+                    required property real remainingAmount
+                    required property real usagePercent
+                    required property bool isOverBudget
+                    required property bool hasBudget
+
+                    width: categoryBudgetListView.width
+                    height: 164
+                    radius: 8
+                    color: "#ffffff"
+                    border.color: budgetItem.isOverBudget ? "#f4b4ae" : "#dadce0"
+
+                    Column {
+                        anchors.fill: parent
+                        anchors.margins: 14
+                        spacing: 10
+
+                        Row {
+                            width: parent.width
+                            height: 24
+                            spacing: 10
+
+                            Text {
+                                width: budgetItem.isOverBudget ? parent.width - overBudgetText.width - parent.spacing : parent.width
+                                text: budgetItem.categoryName
+                                color: "#202124"
+                                font.pixelSize: 17
+                                font.bold: true
+                                elide: Text.ElideRight
+                            }
+
+                            Text {
+                                id: overBudgetText
+
+                                width: 58
+                                text: "已超支"
+                                color: "#b3261e"
+                                font.pixelSize: 14
+                                font.bold: true
+                                horizontalAlignment: Text.AlignRight
+                                visible: budgetItem.isOverBudget
+                            }
+                        }
+
+                        Column {
+                            width: parent.width
+                            spacing: 8
+
+                            DetailRow {
+                                width: parent.width
+                                title: "预算金额"
+                                value: budgetItem.hasBudget ? "¥" + root.formatMoney(budgetItem.budgetAmount) : "未设置预算"
+                                valueColor: budgetItem.hasBudget ? "#1f5fbf" : "#5f6368"
+                            }
+
+                            DetailRow {
+                                width: parent.width
+                                title: "实际支出"
+                                value: "¥" + root.formatMoney(budgetItem.actualAmount)
+                                valueColor: "#b3261e"
+                            }
+
+                            DetailRow {
+                                width: parent.width
+                                title: "剩余金额"
+                                value: budgetItem.hasBudget ? "¥" + root.formatMoney(budgetItem.remainingAmount) : "未设置预算"
+                                valueColor: !budgetItem.hasBudget ? "#5f6368"
+                                        : budgetItem.remainingAmount < 0 ? "#b3261e" : "#1b7f45"
+                            }
+
+                            DetailRow {
+                                width: parent.width
+                                title: "使用比例"
+                                value: root.itemUsagePercentText(budgetItem.hasBudget, budgetItem.usagePercent)
+                                valueColor: budgetItem.isOverBudget ? "#b3261e" : "#3c4043"
+                            }
+                        }
+                    }
+                }
+            }
+
+            Text {
+                width: parent.width
+                text: "暂无支出分类"
+                color: "#5f6368"
+                font.pixelSize: 16
+                horizontalAlignment: Text.AlignHCenter
+                visible: root.errorMessage.length === 0 && categoryBudgetListView.count === 0
+            }
+
             Item {
                 width: parent.width
                 height: root.bottomInset
@@ -332,6 +455,38 @@ Item {
             text: summaryRow.value
             color: summaryRow.valueColor
             font.pixelSize: 16
+            font.bold: true
+            horizontalAlignment: Text.AlignRight
+            elide: Text.ElideRight
+        }
+    }
+
+    component DetailRow: Item {
+        id: detailRow
+
+        required property string title
+        required property string value
+        required property color valueColor
+
+        height: 18
+
+        Text {
+            anchors.left: parent.left
+            anchors.verticalCenter: parent.verticalCenter
+            width: parent.width * 0.45
+            text: detailRow.title
+            color: "#5f6368"
+            font.pixelSize: 14
+            elide: Text.ElideRight
+        }
+
+        Text {
+            anchors.right: parent.right
+            anchors.verticalCenter: parent.verticalCenter
+            width: parent.width * 0.5
+            text: detailRow.value
+            color: detailRow.valueColor
+            font.pixelSize: 14
             font.bold: true
             horizontalAlignment: Text.AlignRight
             elide: Text.ElideRight
