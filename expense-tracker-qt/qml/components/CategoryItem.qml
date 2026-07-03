@@ -52,7 +52,7 @@ Rectangle {
             spacing: 8
 
             Rectangle {
-                width: 56
+                width: 76
                 height: 32
                 radius: 6
                 color: subcategoryArea.pressed ? "#e6f4ea" : "#ffffff"
@@ -60,7 +60,7 @@ Rectangle {
 
                 Text {
                     anchors.centerIn: parent
-                    text: "二级"
+                    text: "二级分类"
                     color: "#137333"
                     font.pixelSize: 14
                 }
