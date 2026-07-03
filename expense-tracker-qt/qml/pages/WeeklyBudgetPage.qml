@@ -6,6 +6,7 @@ Item {
     signal backRequested()
 
     property date selectedWeekStartDate: getWeekStartDate(new Date())
+    property string errorMessage: ""
     readonly property int pageMargin: Math.max(16, Math.min(24, Math.round(width * 0.05)))
     readonly property int bottomInset: Qt.platform.os === "android" ? 72 : pageMargin
 
@@ -37,13 +38,30 @@ Item {
         return formatDate(root.selectedWeekStartDate) + " ~ " + formatDate(weekEndDate)
     }
 
+    function loadWeeklyBudget() {
+        const weekStartDate = formatDate(root.selectedWeekStartDate)
+        const result = appController.loadWeeklyBudget(weekStartDate)
+        if (!result.success) {
+            root.errorMessage = result.errorMessage.length > 0
+                    ? result.errorMessage
+                    : "加载每周预算失败"
+            return
+        }
+
+        root.errorMessage = ""
+    }
+
     function goPreviousWeek() {
         root.selectedWeekStartDate = addDays(root.selectedWeekStartDate, -7)
+        root.loadWeeklyBudget()
     }
 
     function goNextWeek() {
         root.selectedWeekStartDate = addDays(root.selectedWeekStartDate, 7)
+        root.loadWeeklyBudget()
     }
+
+    Component.onCompleted: root.loadWeeklyBudget()
 
     Flickable {
         id: budgetFlickable
@@ -202,8 +220,8 @@ Item {
 
                     Text {
                         width: parent.width
-                        text: "预算数据暂未接入"
-                        color: "#202124"
+                        text: root.errorMessage.length > 0 ? root.errorMessage : "每周预算已加载"
+                        color: root.errorMessage.length > 0 ? "#b3261e" : "#202124"
                         font.pixelSize: 18
                         font.bold: true
                         horizontalAlignment: Text.AlignHCenter
@@ -212,7 +230,9 @@ Item {
 
                     Text {
                         width: parent.width
-                        text: "后续会在这里显示支出分类的预算、实际支出和剩余金额。"
+                        text: root.errorMessage.length > 0
+                                ? "请返回后重试，或检查数据库初始化状态。"
+                                : "后续会在这里显示支出分类的预算、实际支出和剩余金额。"
                         color: "#5f6368"
                         font.pixelSize: 15
                         horizontalAlignment: Text.AlignHCenter
