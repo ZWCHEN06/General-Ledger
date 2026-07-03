@@ -7,6 +7,8 @@ Window {
     id: root
 
     property int editingTransactionId: 0
+    property int managingSubcategoryCategoryId: -1
+    property string managingSubcategoryCategoryName: ""
 
     width: 360
     height: 640
@@ -68,6 +70,21 @@ Window {
 
         CategoryManagePage {
             onBackRequested: pageLoader.sourceComponent = settingsPageComponent
+            onSubcategoryManageRequested: function(categoryId, categoryName) {
+                root.managingSubcategoryCategoryId = categoryId
+                root.managingSubcategoryCategoryName = categoryName
+                pageLoader.sourceComponent = subcategoryManagePageComponent
+            }
+        }
+    }
+
+    Component {
+        id: subcategoryManagePageComponent
+
+        SubcategoryManagePage {
+            categoryId: root.managingSubcategoryCategoryId
+            categoryName: root.managingSubcategoryCategoryName
+            onBackRequested: pageLoader.sourceComponent = categoryManagePageComponent
         }
     }
 

@@ -9,6 +9,7 @@ Rectangle {
 
     signal editRequested(int categoryId, string name)
     signal deleteRequested(int categoryId, string name)
+    signal subcategoryManageRequested(int categoryId, string name)
 
     implicitHeight: 64
     radius: 8
@@ -49,6 +50,29 @@ Rectangle {
 
             anchors.verticalCenter: parent.verticalCenter
             spacing: 8
+
+            Rectangle {
+                width: 56
+                height: 32
+                radius: 6
+                color: subcategoryArea.pressed ? "#e6f4ea" : "#ffffff"
+                border.color: "#34a853"
+
+                Text {
+                    anchors.centerIn: parent
+                    text: "二级"
+                    color: "#137333"
+                    font.pixelSize: 14
+                }
+
+                MouseArea {
+                    id: subcategoryArea
+
+                    anchors.fill: parent
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: categoryItem.subcategoryManageRequested(categoryItem.categoryId, categoryItem.name)
+                }
+            }
 
             Rectangle {
                 width: 56

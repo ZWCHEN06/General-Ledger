@@ -7,6 +7,7 @@ Item {
     id: root
 
     signal backRequested()
+    signal subcategoryManageRequested(int categoryId, string categoryName)
 
     property string selectedType: "expense"
     property string errorMessage: ""
@@ -437,6 +438,9 @@ Item {
 
         delegate: CategoryItem {
             width: categoryListView.width
+            onSubcategoryManageRequested: function(categoryId, name) {
+                root.subcategoryManageRequested(categoryId, name)
+            }
             onEditRequested: function(categoryId, name) {
                 root.startEdit(categoryId, name, isDefault)
             }
