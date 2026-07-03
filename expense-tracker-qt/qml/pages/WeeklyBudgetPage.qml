@@ -8,10 +8,14 @@ Item {
     property date selectedWeekStartDate: getWeekStartDate(new Date())
     property string errorMessage: ""
     property bool budgetDialogVisible: false
+    property bool deleteConfirmVisible: false
     property int editingCategoryId: -1
     property string editingCategoryName: ""
     property string budgetAmountText: ""
     property string budgetDialogError: ""
+    property int deletingCategoryId: -1
+    property string deletingCategoryName: ""
+    property string deleteErrorMessage: ""
     readonly property int pageMargin: Math.max(16, Math.min(24, Math.round(width * 0.05)))
     readonly property int bottomInset: Qt.platform.os === "android" ? 72 : pageMargin
 
@@ -63,9 +67,12 @@ Item {
         return formatDate(root.selectedWeekStartDate) + " ~ " + formatDate(weekEndDate)
     }
 
+    function currentWeekStartText() {
+        return formatDate(root.selectedWeekStartDate)
+    }
+
     function loadWeeklyBudget() {
-        const weekStartDate = formatDate(root.selectedWeekStartDate)
-        const result = appController.loadWeeklyBudget(weekStartDate)
+        const result = appController.loadWeeklyBudget(root.currentWeekStartText())
         if (!result.success) {
             root.errorMessage = result.errorMessage.length > 0
                     ? result.errorMessage
@@ -79,16 +86,19 @@ Item {
     function goPreviousWeek() {
         root.selectedWeekStartDate = addDays(root.selectedWeekStartDate, -7)
         root.closeBudgetDialog()
+        root.closeDeleteConfirm()
         root.loadWeeklyBudget()
     }
 
     function goNextWeek() {
         root.selectedWeekStartDate = addDays(root.selectedWeekStartDate, 7)
         root.closeBudgetDialog()
+        root.closeDeleteConfirm()
         root.loadWeeklyBudget()
     }
 
     function openBudgetDialog(categoryId, categoryName, hasBudget, budgetAmount) {
+        root.closeDeleteConfirm()
         root.editingCategoryId = categoryId
         root.editingCategoryName = categoryName
         root.budgetAmountText = hasBudget ? root.formatMoney(budgetAmount) : ""
@@ -124,7 +134,7 @@ Item {
         }
 
         const result = appController.setWeeklyBudget(
-                    root.formatDate(root.selectedWeekStartDate),
+                    root.currentWeekStartText(),
                     root.editingCategoryId,
                     amount)
         if (!result.success) {
@@ -135,6 +145,41 @@ Item {
         }
 
         root.closeBudgetDialog()
+        root.loadWeeklyBudget()
+    }
+
+    function openDeleteConfirm(categoryId, categoryName) {
+        root.closeBudgetDialog()
+        root.deletingCategoryId = categoryId
+        root.deletingCategoryName = categoryName
+        root.deleteErrorMessage = ""
+        root.deleteConfirmVisible = true
+    }
+
+    function closeDeleteConfirm() {
+        root.deleteConfirmVisible = false
+        root.deletingCategoryId = -1
+        root.deletingCategoryName = ""
+        root.deleteErrorMessage = ""
+    }
+
+    function confirmDeleteBudget() {
+        if (root.deletingCategoryId <= 0) {
+            root.closeDeleteConfirm()
+            return
+        }
+
+        const result = appController.deleteWeeklyBudget(
+                    root.currentWeekStartText(),
+                    root.deletingCategoryId)
+        if (!result.success) {
+            root.deleteErrorMessage = result.errorMessage.length > 0
+                    ? result.errorMessage
+                    : "删除预算失败"
+            return
+        }
+
+        root.closeDeleteConfirm()
         root.loadWeeklyBudget()
     }
 
@@ -150,7 +195,7 @@ Item {
         contentWidth: width
         contentHeight: budgetColumn.height + root.pageMargin
         boundsBehavior: Flickable.StopAtBounds
-        enabled: !root.budgetDialogVisible
+        enabled: !root.budgetDialogVisible && !root.deleteConfirmVisible
 
         Column {
             id: budgetColumn
@@ -229,56 +274,18 @@ Item {
                         height: 44
                         spacing: 10
 
-                        Rectangle {
-                            id: previousWeekButton
-
+                        WeekButton {
                             width: (parent.width - parent.spacing) / 2
                             height: parent.height
-                            radius: 8
-                            color: previousWeekMouseArea.pressed ? "#f1f3f4" : "#ffffff"
-                            border.color: "#dadce0"
-
-                            Text {
-                                anchors.centerIn: parent
-                                text: "上一周"
-                                color: "#3c4043"
-                                font.pixelSize: 16
-                                font.bold: true
-                            }
-
-                            MouseArea {
-                                id: previousWeekMouseArea
-
-                                anchors.fill: parent
-                                cursorShape: Qt.PointingHandCursor
-                                onClicked: root.goPreviousWeek()
-                            }
+                            text: "上一周"
+                            onClicked: root.goPreviousWeek()
                         }
 
-                        Rectangle {
-                            id: nextWeekButton
-
+                        WeekButton {
                             width: (parent.width - parent.spacing) / 2
                             height: parent.height
-                            radius: 8
-                            color: nextWeekMouseArea.pressed ? "#f1f3f4" : "#ffffff"
-                            border.color: "#dadce0"
-
-                            Text {
-                                anchors.centerIn: parent
-                                text: "下一周"
-                                color: "#3c4043"
-                                font.pixelSize: 16
-                                font.bold: true
-                            }
-
-                            MouseArea {
-                                id: nextWeekMouseArea
-
-                                anchors.fill: parent
-                                cursorShape: Qt.PointingHandCursor
-                                onClicked: root.goNextWeek()
-                            }
+                            text: "下一周"
+                            onClicked: root.goNextWeek()
                         }
                     }
                 }
@@ -390,7 +397,7 @@ Item {
                     required property bool hasBudget
 
                     width: categoryBudgetListView.width
-                    height: 164
+                    height: budgetItem.hasBudget ? 206 : 164
                     radius: 8
                     color: itemMouseArea.pressed ? "#f8f9fa" : "#ffffff"
                     border.color: budgetItem.isOverBudget ? "#f4b4ae" : "#dadce0"
@@ -470,6 +477,33 @@ Item {
                                 title: "使用比例"
                                 value: root.itemUsagePercentText(budgetItem.hasBudget, budgetItem.usagePercent)
                                 valueColor: budgetItem.isOverBudget ? "#b3261e" : "#3c4043"
+                            }
+                        }
+
+                        Rectangle {
+                            width: parent.width
+                            height: 36
+                            radius: 8
+                            color: deleteBudgetMouseArea.pressed ? "#fce8e6" : "#ffffff"
+                            border.color: "#f4b4ae"
+                            visible: budgetItem.hasBudget
+
+                            Text {
+                                anchors.centerIn: parent
+                                text: "删除预算"
+                                color: "#b3261e"
+                                font.pixelSize: 15
+                                font.bold: true
+                            }
+
+                            MouseArea {
+                                id: deleteBudgetMouseArea
+
+                                anchors.fill: parent
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: root.openDeleteConfirm(
+                                               budgetItem.categoryId,
+                                               budgetItem.categoryName)
                             }
                         }
                     }
@@ -584,58 +618,170 @@ Item {
                     visible: root.budgetDialogError.length > 0
                 }
 
-                Row {
+                DialogButtonRow {
                     width: parent.width
-                    height: 42
-                    spacing: 10
-
-                    Rectangle {
-                        width: (parent.width - parent.spacing) / 2
-                        height: parent.height
-                        radius: 8
-                        color: cancelBudgetMouseArea.pressed ? "#f1f3f4" : "#ffffff"
-                        border.color: "#dadce0"
-
-                        Text {
-                            anchors.centerIn: parent
-                            text: "取消"
-                            color: "#3c4043"
-                            font.pixelSize: 16
-                            font.bold: true
-                        }
-
-                        MouseArea {
-                            id: cancelBudgetMouseArea
-
-                            anchors.fill: parent
-                            cursorShape: Qt.PointingHandCursor
-                            onClicked: root.closeBudgetDialog()
-                        }
-                    }
-
-                    Rectangle {
-                        width: (parent.width - parent.spacing) / 2
-                        height: parent.height
-                        radius: 8
-                        color: saveBudgetMouseArea.pressed ? "#185abc" : "#1a73e8"
-
-                        Text {
-                            anchors.centerIn: parent
-                            text: "保存"
-                            color: "#ffffff"
-                            font.pixelSize: 16
-                            font.bold: true
-                        }
-
-                        MouseArea {
-                            id: saveBudgetMouseArea
-
-                            anchors.fill: parent
-                            cursorShape: Qt.PointingHandCursor
-                            onClicked: root.saveBudget()
-                        }
-                    }
+                    cancelText: "取消"
+                    confirmText: "保存"
+                    confirmColor: "#1a73e8"
+                    confirmPressedColor: "#185abc"
+                    onCancelClicked: root.closeBudgetDialog()
+                    onConfirmClicked: root.saveBudget()
                 }
+            }
+        }
+    }
+
+    Rectangle {
+        anchors.fill: parent
+        z: 11
+        color: "#80000000"
+        visible: root.deleteConfirmVisible
+
+        MouseArea {
+            anchors.fill: parent
+            onClicked: root.closeDeleteConfirm()
+        }
+
+        Rectangle {
+            anchors.centerIn: parent
+            width: Math.min(parent.width - root.pageMargin * 2, 340)
+            height: root.deleteErrorMessage.length > 0 ? 218 : 184
+            radius: 8
+            color: "#ffffff"
+            border.color: "#dadce0"
+
+            MouseArea {
+                anchors.fill: parent
+            }
+
+            Column {
+                anchors.fill: parent
+                anchors.margins: 18
+                spacing: 12
+
+                Text {
+                    width: parent.width
+                    text: "确认删除预算"
+                    color: "#202124"
+                    font.pixelSize: 20
+                    font.bold: true
+                    elide: Text.ElideRight
+                }
+
+                Text {
+                    width: parent.width
+                    text: "确定删除“" + root.deletingCategoryName + "”的本周预算吗？"
+                    color: "#5f6368"
+                    font.pixelSize: 15
+                    wrapMode: Text.WordWrap
+                }
+
+                Text {
+                    width: parent.width
+                    text: root.deleteErrorMessage
+                    color: "#b3261e"
+                    font.pixelSize: 14
+                    wrapMode: Text.WordWrap
+                    visible: root.deleteErrorMessage.length > 0
+                }
+
+                DialogButtonRow {
+                    width: parent.width
+                    cancelText: "取消"
+                    confirmText: "删除"
+                    confirmColor: "#d93025"
+                    confirmPressedColor: "#a50e0e"
+                    onCancelClicked: root.closeDeleteConfirm()
+                    onConfirmClicked: root.confirmDeleteBudget()
+                }
+            }
+        }
+    }
+
+    component WeekButton: Rectangle {
+        id: weekButton
+
+        required property string text
+        signal clicked()
+
+        radius: 8
+        color: weekButtonMouseArea.pressed ? "#f1f3f4" : "#ffffff"
+        border.color: "#dadce0"
+
+        Text {
+            anchors.centerIn: parent
+            text: weekButton.text
+            color: "#3c4043"
+            font.pixelSize: 16
+            font.bold: true
+        }
+
+        MouseArea {
+            id: weekButtonMouseArea
+
+            anchors.fill: parent
+            cursorShape: Qt.PointingHandCursor
+            onClicked: weekButton.clicked()
+        }
+    }
+
+    component DialogButtonRow: Row {
+        id: dialogButtonRow
+
+        required property string cancelText
+        required property string confirmText
+        required property color confirmColor
+        required property color confirmPressedColor
+        signal cancelClicked()
+        signal confirmClicked()
+
+        height: 42
+        spacing: 10
+
+        Rectangle {
+            width: (parent.width - parent.spacing) / 2
+            height: parent.height
+            radius: 8
+            color: cancelMouseArea.pressed ? "#f1f3f4" : "#ffffff"
+            border.color: "#dadce0"
+
+            Text {
+                anchors.centerIn: parent
+                text: dialogButtonRow.cancelText
+                color: "#3c4043"
+                font.pixelSize: 16
+                font.bold: true
+            }
+
+            MouseArea {
+                id: cancelMouseArea
+
+                anchors.fill: parent
+                cursorShape: Qt.PointingHandCursor
+                onClicked: dialogButtonRow.cancelClicked()
+            }
+        }
+
+        Rectangle {
+            width: (parent.width - parent.spacing) / 2
+            height: parent.height
+            radius: 8
+            color: confirmMouseArea.pressed ? dialogButtonRow.confirmPressedColor : dialogButtonRow.confirmColor
+
+            Text {
+                anchors.centerIn: parent
+                text: dialogButtonRow.confirmText
+                color: "#ffffff"
+                font.pixelSize: 16
+                font.bold: true
+            }
+
+            MouseArea {
+                id: confirmMouseArea
+
+                anchors.fill: parent
+                cursorShape: Qt.PointingHandCursor
+                onClicked: dialogButtonRow.confirmClicked()
             }
         }
     }
