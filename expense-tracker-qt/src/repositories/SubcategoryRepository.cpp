@@ -327,3 +327,140 @@ SubcategoryRepositoryResult SubcategoryRepository::addSubcategory(int categoryId
         QString()
     };
 }
+
+SubcategoryRepositoryResult SubcategoryRepository::updateSubcategoryName(int id, const QString &name)
+{
+    if (id <= 0) {
+        return SubcategoryRepositoryResult {
+            false,
+            0,
+            QStringLiteral("二级分类 id 必须大于 0")
+        };
+    }
+
+    const QString trimmedName = name.trimmed();
+    if (trimmedName.isEmpty()) {
+        return SubcategoryRepositoryResult {
+            false,
+            0,
+            QStringLiteral("二级分类名称不能为空")
+        };
+    }
+
+    if (!m_database.isOpen()) {
+        return SubcategoryRepositoryResult {
+            false,
+            0,
+            QStringLiteral("数据库未打开，无法修改二级分类")
+        };
+    }
+
+    QSqlQuery subcategoryQuery(m_database);
+    if (!subcategoryQuery.prepare(QStringLiteral(R"(
+        SELECT
+            category_id,
+            is_default
+        FROM subcategories
+        WHERE id = :id
+        LIMIT 1
+    )"))) {
+        const QString error = QStringLiteral("查询二级分类失败：%1").arg(subcategoryQuery.lastError().text());
+        qWarning().noquote() << error;
+        return SubcategoryRepositoryResult {false, 0, error};
+    }
+
+    subcategoryQuery.bindValue(QStringLiteral(":id"), id);
+
+    if (!subcategoryQuery.exec()) {
+        const QString error = QStringLiteral("查询二级分类失败：%1").arg(subcategoryQuery.lastError().text());
+        qWarning().noquote() << error;
+        return SubcategoryRepositoryResult {false, 0, error};
+    }
+
+    if (!subcategoryQuery.next()) {
+        return SubcategoryRepositoryResult {
+            false,
+            0,
+            QStringLiteral("二级分类不存在")
+        };
+    }
+
+    const int categoryId = subcategoryQuery.value(QStringLiteral("category_id")).toInt();
+    const bool isDefault = subcategoryQuery.value(QStringLiteral("is_default")).toInt() == 1;
+    if (isDefault) {
+        return SubcategoryRepositoryResult {
+            false,
+            0,
+            QStringLiteral("默认二级分类不能改名")
+        };
+    }
+
+    QSqlQuery duplicateQuery(m_database);
+    if (!duplicateQuery.prepare(QStringLiteral(R"(
+        SELECT id
+        FROM subcategories
+        WHERE category_id = :category_id
+          AND name = :name
+          AND id <> :id
+        LIMIT 1
+    )"))) {
+        const QString error = QStringLiteral("检查二级分类重名失败：%1").arg(duplicateQuery.lastError().text());
+        qWarning().noquote() << error;
+        return SubcategoryRepositoryResult {false, 0, error};
+    }
+
+    duplicateQuery.bindValue(QStringLiteral(":category_id"), categoryId);
+    duplicateQuery.bindValue(QStringLiteral(":name"), trimmedName);
+    duplicateQuery.bindValue(QStringLiteral(":id"), id);
+
+    if (!duplicateQuery.exec()) {
+        const QString error = QStringLiteral("检查二级分类重名失败：%1").arg(duplicateQuery.lastError().text());
+        qWarning().noquote() << error;
+        return SubcategoryRepositoryResult {false, 0, error};
+    }
+
+    if (duplicateQuery.next()) {
+        return SubcategoryRepositoryResult {
+            false,
+            0,
+            QStringLiteral("同一一级分类下二级分类名称不能重复")
+        };
+    }
+
+    QSqlQuery updateQuery(m_database);
+    if (!updateQuery.prepare(QStringLiteral(R"(
+        UPDATE subcategories
+        SET
+            name = :name,
+            updated_at = :updated_at
+        WHERE id = :id
+    )"))) {
+        const QString error = QStringLiteral("修改二级分类名称失败：%1").arg(updateQuery.lastError().text());
+        qWarning().noquote() << error;
+        return SubcategoryRepositoryResult {false, 0, error};
+    }
+
+    updateQuery.bindValue(QStringLiteral(":name"), trimmedName);
+    updateQuery.bindValue(QStringLiteral(":updated_at"), QDateTime::currentDateTime().toString(Qt::ISODate));
+    updateQuery.bindValue(QStringLiteral(":id"), id);
+
+    if (!updateQuery.exec()) {
+        const QString error = QStringLiteral("修改二级分类名称失败：%1").arg(updateQuery.lastError().text());
+        qWarning().noquote() << error;
+        return SubcategoryRepositoryResult {false, 0, error};
+    }
+
+    if (updateQuery.numRowsAffected() <= 0) {
+        return SubcategoryRepositoryResult {
+            false,
+            0,
+            QStringLiteral("二级分类不存在")
+        };
+    }
+
+    return SubcategoryRepositoryResult {
+        true,
+        id,
+        QString()
+    };
+}

@@ -22,6 +22,7 @@ public:
     QList<Subcategory> getSubcategoryById(int id);
     QList<Subcategory> findSubcategoryByNameAndCategoryId(const QString &name, int categoryId);
     SubcategoryRepositoryResult addSubcategory(int categoryId, const QString &name);
+    SubcategoryRepositoryResult updateSubcategoryName(int id, const QString &name);
 
 private:
     QSqlDatabase m_database;
