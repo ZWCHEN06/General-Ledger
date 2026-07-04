@@ -2,6 +2,24 @@
 
 #include "../repositories/TransactionRepository.h"
 
+namespace {
+QString displayCategory(const Transaction &transaction)
+{
+    const QString category = transaction.category().trimmed();
+    const QString subcategory = transaction.subcategory().trimmed();
+
+    if (subcategory.isEmpty()) {
+        return category;
+    }
+
+    if (category.isEmpty()) {
+        return subcategory;
+    }
+
+    return QStringLiteral("%1 / %2").arg(category, subcategory);
+}
+}
+
 TransactionListModel::TransactionListModel(QObject *parent)
     : QAbstractListModel(parent)
 {
@@ -39,7 +57,7 @@ QVariant TransactionListModel::data(const QModelIndex &index, int role) const
     case AmountRole:
         return transaction.amount();
     case CategoryRole:
-        return transaction.category();
+        return displayCategory(transaction);
     case DateRole:
         return transaction.date();
     case NoteRole:
