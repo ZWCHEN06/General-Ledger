@@ -12,6 +12,8 @@ Item {
     property string transactionType: "expense"
     property int selectedCategoryId: -1
     property string selectedCategoryName: ""
+    property int selectedSubcategoryId: -1
+    property string selectedSubcategoryName: ""
     property string errorMessage: ""
     readonly property int pageMargin: Math.max(16, Math.min(24, Math.round(width * 0.05)))
     readonly property int bottomInset: Qt.platform.os === "android" ? 96 : pageMargin
@@ -20,12 +22,44 @@ Item {
     function refreshCategories() {
         selectedCategoryId = -1
         selectedCategoryName = ""
+        selectedSubcategoryId = -1
+        selectedSubcategoryName = ""
+        appController.subcategoryListModel.clear()
         categoryListModel.refresh(transactionType)
+    }
+
+    function selectCategory(categoryId, categoryName) {
+        selectedCategoryId = categoryId
+        selectedCategoryName = categoryName
+        selectedSubcategoryId = -1
+        selectedSubcategoryName = ""
+        errorMessage = ""
+
+        const result = appController.refreshSubcategories(categoryId)
+        if (!result.success) {
+            errorMessage = result.errorMessage
+        }
+    }
+
+    function selectSubcategory(subcategoryId, subcategoryName) {
+        selectedSubcategoryId = subcategoryId
+        selectedSubcategoryName = subcategoryName
+        errorMessage = ""
     }
 
     function saveTransaction() {
         if (selectedCategoryId <= 0 || selectedCategoryName.length === 0) {
             errorMessage = "请先选择分类"
+            return
+        }
+
+        if (subcategoryRepeater.count === 0) {
+            errorMessage = "当前一级分类下没有二级分类，请先在分类管理中添加"
+            return
+        }
+
+        if (selectedSubcategoryId <= 0 || selectedSubcategoryName.length === 0) {
+            errorMessage = "请先选择二级分类"
             return
         }
 
@@ -35,7 +69,9 @@ Item {
             selectedCategoryName,
             dateField.text,
             noteField.text,
-            selectedCategoryId
+            selectedCategoryId,
+            selectedSubcategoryId,
+            selectedSubcategoryName
         )
 
         if (result.success) {
@@ -157,15 +193,12 @@ Item {
 
                         Component.onCompleted: {
                             if (index === 0 && root.selectedCategoryId <= 0) {
-                                root.selectedCategoryId = categoryId
-                                root.selectedCategoryName = name
+                                root.selectCategory(categoryId, name)
                             }
                         }
 
                         onClicked: function(categoryName) {
-                            root.selectedCategoryId = categoryId
-                            root.selectedCategoryName = categoryName
-                            root.errorMessage = ""
+                            root.selectCategory(categoryId, categoryName)
                         }
                     }
                 }
@@ -178,6 +211,60 @@ Item {
                 font.pixelSize: 15
                 wrapMode: Text.WordWrap
                 visible: categoryRepeater.count === 0
+            }
+
+            Text {
+                width: parent.width
+                text: "二级分类"
+                color: "#3c4043"
+                font.pixelSize: 16
+                font.bold: true
+                visible: root.selectedCategoryId > 0
+            }
+
+            Grid {
+                id: subcategoryGrid
+
+                width: parent.width
+                columns: 2
+                columnSpacing: 10
+                rowSpacing: 10
+                visible: root.selectedCategoryId > 0 && subcategoryRepeater.count > 0
+
+                Repeater {
+                    id: subcategoryRepeater
+
+                    model: appController.subcategoryListModel
+
+                    delegate: CategoryOption {
+                        required property int index
+                        required property string name
+
+                        width: (subcategoryGrid.width - subcategoryGrid.columnSpacing) / 2
+                        height: 44
+                        label: name
+                        selected: root.selectedSubcategoryId === model.id
+
+                        Component.onCompleted: {
+                            if (index === 0 && root.selectedSubcategoryId <= 0) {
+                                root.selectSubcategory(model.id, name)
+                            }
+                        }
+
+                        onClicked: function(subcategoryName) {
+                            root.selectSubcategory(model.id, subcategoryName)
+                        }
+                    }
+                }
+            }
+
+            Text {
+                width: parent.width
+                text: "当前一级分类下没有二级分类，请先在分类管理中添加"
+                color: "#5f6368"
+                font.pixelSize: 15
+                wrapMode: Text.WordWrap
+                visible: root.selectedCategoryId > 0 && subcategoryRepeater.count === 0
             }
 
             FormField {
