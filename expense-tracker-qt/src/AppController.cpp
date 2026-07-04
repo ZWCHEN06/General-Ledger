@@ -1029,6 +1029,7 @@ QVariantMap AppController::applyTransactionFilter(const QVariant &year,
                                                   const QVariant &month,
                                                   const QString &type,
                                                   const QString &category,
+                                                  const QVariant &subcategoryId,
                                                   const QString &keyword,
                                                   const QVariant &minAmount,
                                                   const QVariant &maxAmount)
@@ -1059,6 +1060,15 @@ QVariantMap AppController::applyTransactionFilter(const QVariant &year,
     const QString trimmedCategory = category.trimmed();
     if (!trimmedCategory.isEmpty()) {
         filter.category = trimmedCategory;
+    }
+
+    if (!parseOptionalInt(subcategoryId,
+                          QStringLiteral("二级分类ID"),
+                          1,
+                          2147483647,
+                          &filter.subcategoryId,
+                          &validationError)) {
+        return failureResult(validationError);
     }
 
     const QString trimmedKeyword = keyword.trimmed();
@@ -1125,6 +1135,9 @@ QVariantMap AppController::currentTransactionFilter() const
              ? Transaction::typeToString(m_transactionFilter.type.value())
              : QStringLiteral("all")},
         {QStringLiteral("category"), m_transactionFilter.category.value_or(QString())},
+        {QStringLiteral("subcategoryId"), m_transactionFilter.subcategoryId.has_value()
+             ? QString::number(m_transactionFilter.subcategoryId.value())
+             : QString()},
         {QStringLiteral("keyword"), m_transactionFilter.keyword.value_or(QString())},
         {QStringLiteral("minAmount"), optionalDoubleToString(m_transactionFilter.minAmount)},
         {QStringLiteral("maxAmount"), optionalDoubleToString(m_transactionFilter.maxAmount)}

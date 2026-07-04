@@ -10,6 +10,10 @@ Item {
     property bool filterExpanded: false
     property bool filterActive: false
     property string selectedFilterType: "all"
+    property int selectedFilterCategoryId: -1
+    property string selectedFilterCategoryName: ""
+    property int selectedFilterSubcategoryId: -1
+    property string selectedFilterSubcategoryName: ""
     property string filterErrorMessage: ""
     readonly property int pageMargin: Math.max(16, Math.min(24, Math.round(width * 0.05)))
     readonly property int bottomInset: Qt.platform.os === "android" ? 72 : pageMargin
@@ -66,7 +70,8 @@ Item {
                     monthFilter.year,
                     monthFilter.month,
                     selectedFilterType,
-                    categoryFilterInput.text.trim(),
+                    selectedFilterCategoryName.length > 0 ? selectedFilterCategoryName : categoryFilterInput.text.trim(),
+                    selectedFilterSubcategoryId > 0 ? selectedFilterSubcategoryId : "",
                     keywordFilterInput.text.trim(),
                     minAmountFilterInput.text.trim(),
                     maxAmountFilterInput.text.trim())
@@ -80,6 +85,12 @@ Item {
         monthFilterInput.text = ""
         selectedFilterType = "all"
         categoryFilterInput.text = ""
+        selectedFilterCategoryId = -1
+        selectedFilterCategoryName = ""
+        selectedFilterSubcategoryId = -1
+        selectedFilterSubcategoryName = ""
+        categoryListModel.refresh("all")
+        appController.subcategoryListModel.clear()
         keywordFilterInput.text = ""
         minAmountFilterInput.text = ""
         maxAmountFilterInput.text = ""
@@ -107,10 +118,21 @@ Item {
 
         selectedFilterType = state.type
         categoryFilterInput.text = state.category
+        selectedFilterCategoryId = -1
+        selectedFilterCategoryName = state.category
+        selectedFilterSubcategoryId = state.subcategoryId.length > 0 ? parseInt(state.subcategoryId, 10) : -1
+        selectedFilterSubcategoryName = ""
         keywordFilterInput.text = state.keyword
         minAmountFilterInput.text = state.minAmount
         maxAmountFilterInput.text = state.maxAmount
         filterActive = state.filterActive
+
+        if (selectedFilterType === "income" || selectedFilterType === "expense") {
+            categoryListModel.refresh(selectedFilterType)
+        } else {
+            categoryListModel.refresh("all")
+            appController.subcategoryListModel.clear()
+        }
     }
 
     function refreshCurrentList() {
@@ -119,6 +141,38 @@ Item {
         if (result.success) {
             filterActive = result.filterActive
         }
+    }
+
+    function changeFilterType(type) {
+        selectedFilterType = type
+        categoryFilterInput.text = ""
+        selectedFilterCategoryId = -1
+        selectedFilterCategoryName = ""
+        selectedFilterSubcategoryId = -1
+        selectedFilterSubcategoryName = ""
+        filterErrorMessage = ""
+        appController.subcategoryListModel.clear()
+        categoryListModel.refresh(type)
+    }
+
+    function selectFilterCategory(categoryId, categoryName) {
+        selectedFilterCategoryId = categoryId
+        selectedFilterCategoryName = categoryName
+        categoryFilterInput.text = categoryName
+        selectedFilterSubcategoryId = -1
+        selectedFilterSubcategoryName = ""
+        filterErrorMessage = ""
+
+        const result = appController.refreshSubcategories(categoryId)
+        if (!result.success) {
+            filterErrorMessage = result.errorMessage
+        }
+    }
+
+    function selectFilterSubcategory(subcategoryId, subcategoryName) {
+        selectedFilterSubcategoryId = subcategoryId
+        selectedFilterSubcategoryName = subcategoryName
+        filterErrorMessage = ""
     }
 
     Component.onCompleted: {
@@ -224,14 +278,18 @@ Item {
 
                 anchors.top: titleRow.bottom
                 width: parent.width
-                height: 558
+                height: filterContentColumn.implicitHeight + 24
                 visible: root.filterExpanded
                 radius: 8
                 color: "#ffffff"
                 border.color: "#dadce0"
 
                 Column {
-                    anchors.fill: parent
+                    id: filterContentColumn
+
+                    anchors.left: parent.left
+                    anchors.right: parent.right
+                    anchors.top: parent.top
                     anchors.margins: 12
                     spacing: 10
 
@@ -308,7 +366,7 @@ Item {
                                 MouseArea {
                                     anchors.fill: parent
                                     cursorShape: Qt.PointingHandCursor
-                                    onClicked: root.selectedFilterType = "all"
+                                    onClicked: root.changeFilterType("all")
                                 }
                             }
 
@@ -330,7 +388,7 @@ Item {
                                 MouseArea {
                                     anchors.fill: parent
                                     cursorShape: Qt.PointingHandCursor
-                                    onClicked: root.selectedFilterType = "income"
+                                    onClicked: root.changeFilterType("income")
                                 }
                             }
 
@@ -352,7 +410,7 @@ Item {
                                 MouseArea {
                                     anchors.fill: parent
                                     cursorShape: Qt.PointingHandCursor
-                                    onClicked: root.selectedFilterType = "expense"
+                                    onClicked: root.changeFilterType("expense")
                                 }
                             }
                         }
@@ -387,8 +445,167 @@ Item {
                                 anchors.margins: 10
                                 color: "#202124"
                                 font.pixelSize: 16
+                                readOnly: true
                                 verticalAlignment: TextInput.AlignVCenter
                                 clip: true
+                            }
+                        }
+                    }
+
+                    Item {
+                        width: parent.width
+                        height: categorySelectionColumn.implicitHeight
+
+                        Column {
+                            id: categorySelectionColumn
+
+                            width: parent.width
+                            spacing: 8
+
+                            Text {
+                                width: parent.width
+                                text: "一级分类"
+                                color: "#3c4043"
+                                font.pixelSize: 14
+                                font.bold: true
+                            }
+
+                            Text {
+                                width: parent.width
+                                text: "请先选择收入或支出类型"
+                                color: "#5f6368"
+                                font.pixelSize: 14
+                                wrapMode: Text.WordWrap
+                                visible: root.selectedFilterType === "all"
+                            }
+
+                            Grid {
+                                id: filterCategoryGrid
+
+                                width: parent.width
+                                columns: 2
+                                columnSpacing: 8
+                                rowSpacing: 8
+                                visible: root.selectedFilterType === "income" || root.selectedFilterType === "expense"
+
+                                Repeater {
+                                    model: categoryListModel
+
+                                    delegate: Rectangle {
+                                        required property int categoryId
+                                        required property string name
+
+                                        width: (filterCategoryGrid.width - filterCategoryGrid.columnSpacing) / 2
+                                        height: 38
+                                        radius: 6
+                                        color: root.selectedFilterCategoryId === categoryId ? "#e8f0fe" : "#ffffff"
+                                        border.color: root.selectedFilterCategoryId === categoryId ? "#1a73e8" : "#dadce0"
+
+                                        Component.onCompleted: {
+                                            if (root.selectedFilterCategoryId <= 0 && root.selectedFilterCategoryName.length > 0 && root.selectedFilterCategoryName === name) {
+                                                root.selectFilterCategory(categoryId, name)
+                                            }
+                                        }
+
+                                        Text {
+                                            anchors.centerIn: parent
+                                            width: parent.width - 16
+                                            text: name
+                                            color: root.selectedFilterCategoryId === categoryId ? "#1a73e8" : "#3c4043"
+                                            font.pixelSize: 14
+                                            font.bold: true
+                                            horizontalAlignment: Text.AlignHCenter
+                                            elide: Text.ElideRight
+                                        }
+
+                                        MouseArea {
+                                            anchors.fill: parent
+                                            cursorShape: Qt.PointingHandCursor
+                                            onClicked: root.selectFilterCategory(categoryId, name)
+                                        }
+                                    }
+                                }
+                            }
+
+                            Text {
+                                width: parent.width
+                                text: "二级分类"
+                                color: "#3c4043"
+                                font.pixelSize: 14
+                                font.bold: true
+                                visible: root.selectedFilterCategoryId > 0
+                            }
+
+                            Grid {
+                                id: filterSubcategoryGrid
+
+                                width: parent.width
+                                columns: 2
+                                columnSpacing: 8
+                                rowSpacing: 8
+                                visible: root.selectedFilterCategoryId > 0
+
+                                Rectangle {
+                                    width: (filterSubcategoryGrid.width - filterSubcategoryGrid.columnSpacing) / 2
+                                    height: 38
+                                    radius: 6
+                                    color: root.selectedFilterSubcategoryId <= 0 ? "#e8f0fe" : "#ffffff"
+                                    border.color: root.selectedFilterSubcategoryId <= 0 ? "#1a73e8" : "#dadce0"
+
+                                    Text {
+                                        anchors.centerIn: parent
+                                        width: parent.width - 16
+                                        text: "全部二级分类"
+                                        color: root.selectedFilterSubcategoryId <= 0 ? "#1a73e8" : "#3c4043"
+                                        font.pixelSize: 14
+                                        font.bold: true
+                                        horizontalAlignment: Text.AlignHCenter
+                                        elide: Text.ElideRight
+                                    }
+
+                                    MouseArea {
+                                        anchors.fill: parent
+                                        cursorShape: Qt.PointingHandCursor
+                                        onClicked: root.selectFilterSubcategory(-1, "")
+                                    }
+                                }
+
+                                Repeater {
+                                    model: appController.subcategoryListModel
+
+                                    delegate: Rectangle {
+                                        required property string name
+
+                                        width: (filterSubcategoryGrid.width - filterSubcategoryGrid.columnSpacing) / 2
+                                        height: 38
+                                        radius: 6
+                                        color: root.selectedFilterSubcategoryId === model.id ? "#e8f0fe" : "#ffffff"
+                                        border.color: root.selectedFilterSubcategoryId === model.id ? "#1a73e8" : "#dadce0"
+
+                                        Component.onCompleted: {
+                                            if (root.selectedFilterSubcategoryId === model.id) {
+                                                root.selectedFilterSubcategoryName = name
+                                            }
+                                        }
+
+                                        Text {
+                                            anchors.centerIn: parent
+                                            width: parent.width - 16
+                                            text: name
+                                            color: root.selectedFilterSubcategoryId === model.id ? "#1a73e8" : "#3c4043"
+                                            font.pixelSize: 14
+                                            font.bold: true
+                                            horizontalAlignment: Text.AlignHCenter
+                                            elide: Text.ElideRight
+                                        }
+
+                                        MouseArea {
+                                            anchors.fill: parent
+                                            cursorShape: Qt.PointingHandCursor
+                                            onClicked: root.selectFilterSubcategory(model.id, name)
+                                        }
+                                    }
+                                }
                             }
                         }
                     }

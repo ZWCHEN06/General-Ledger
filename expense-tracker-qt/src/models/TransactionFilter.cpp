@@ -21,6 +21,11 @@ bool TransactionFilter::validate(QString *errorMessage) const
         return false;
     }
 
+    if (subcategoryId.has_value() && subcategoryId.value() <= 0) {
+        setError(errorMessage, QStringLiteral("二级分类ID无效"));
+        return false;
+    }
+
     if (minAmount.has_value() && minAmount.value() < 0.0) {
         setError(errorMessage, QStringLiteral("最小金额不能小于 0"));
         return false;
@@ -48,6 +53,7 @@ bool TransactionFilter::hasActiveConditions() const
         || month.has_value()
         || type.has_value()
         || !category.value_or(QString()).trimmed().isEmpty()
+        || subcategoryId.has_value()
         || !keyword.value_or(QString()).trimmed().isEmpty()
         || minAmount.has_value()
         || maxAmount.has_value();

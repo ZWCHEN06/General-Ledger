@@ -263,6 +263,10 @@ QList<Transaction> TransactionRepository::getTransactionsByFilter(const Transact
         whereConditions.append(QStringLiteral("transactions.category = :category"));
     }
 
+    if (filter.subcategoryId.has_value()) {
+        whereConditions.append(QStringLiteral("transactions.subcategory_id = :subcategoryId"));
+    }
+
     const QString keyword = filter.keyword.value_or(QString()).trimmed();
     if (!keyword.isEmpty()) {
         whereConditions.append(QStringLiteral("transactions.note LIKE :keyword ESCAPE '!'"));
@@ -317,6 +321,10 @@ QList<Transaction> TransactionRepository::getTransactionsByFilter(const Transact
 
     if (!category.isEmpty()) {
         query.bindValue(QStringLiteral(":category"), category);
+    }
+
+    if (filter.subcategoryId.has_value()) {
+        query.bindValue(QStringLiteral(":subcategoryId"), filter.subcategoryId.value());
     }
 
     if (!keyword.isEmpty()) {
