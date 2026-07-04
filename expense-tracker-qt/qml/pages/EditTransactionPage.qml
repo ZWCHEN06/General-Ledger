@@ -14,9 +14,14 @@ Item {
     property string transactionType: "expense"
     property int selectedCategoryId: -1
     property string selectedCategoryName: ""
+    property int selectedSubcategoryId: -1
+    property string selectedSubcategoryName: ""
     property int pendingCategoryId: -1
     property string pendingCategoryName: ""
+    property int pendingSubcategoryId: -1
+    property string pendingSubcategoryName: ""
     property bool categorySelectionResolved: false
+    property bool subcategorySelectionResolved: false
     property string errorMessage: ""
     property bool confirmDeleteVisible: false
     readonly property int pageMargin: Math.max(16, Math.min(24, Math.round(width * 0.05)))
@@ -27,12 +32,39 @@ Item {
         if (resetSelection) {
             selectedCategoryId = -1
             selectedCategoryName = ""
+            selectedSubcategoryId = -1
+            selectedSubcategoryName = ""
             pendingCategoryId = -1
             pendingCategoryName = ""
+            pendingSubcategoryId = -1
+            pendingSubcategoryName = ""
+            appController.subcategoryListModel.clear()
         }
 
         categorySelectionResolved = false
+        subcategorySelectionResolved = false
         categoryListModel.refresh(transactionType)
+    }
+
+    function refreshSubcategoriesForCurrentCategory(resetSelection) {
+        if (resetSelection) {
+            selectedSubcategoryId = -1
+            selectedSubcategoryName = ""
+            pendingSubcategoryId = -1
+            pendingSubcategoryName = ""
+        }
+
+        subcategorySelectionResolved = false
+
+        if (selectedCategoryId <= 0) {
+            appController.subcategoryListModel.clear()
+            return
+        }
+
+        const result = appController.refreshSubcategories(selectedCategoryId)
+        if (!result.success) {
+            errorMessage = result.errorMessage
+        }
     }
 
     function applyCategoryCandidate(categoryId, categoryName, index) {
@@ -44,19 +76,70 @@ Item {
             selectedCategoryId = categoryId
             selectedCategoryName = categoryName
             categorySelectionResolved = true
+            refreshSubcategoriesForCurrentCategory(false)
             return
         }
 
         if (pendingCategoryName.length > 0 && categoryName === pendingCategoryName) {
             selectedCategoryId = categoryId
             selectedCategoryName = categoryName
+            refreshSubcategoriesForCurrentCategory(false)
             return
         }
 
         if (index === 0 && selectedCategoryId <= 0) {
             selectedCategoryId = categoryId
             selectedCategoryName = categoryName
+            refreshSubcategoriesForCurrentCategory(false)
         }
+    }
+
+    function applySubcategoryCandidate(subcategoryId, subcategoryName, index) {
+        if (subcategorySelectionResolved) {
+            return
+        }
+
+        if (pendingSubcategoryId > 0 && subcategoryId === pendingSubcategoryId) {
+            selectedSubcategoryId = subcategoryId
+            selectedSubcategoryName = subcategoryName
+            subcategorySelectionResolved = true
+            return
+        }
+
+        if (pendingSubcategoryName.length > 0 && subcategoryName === pendingSubcategoryName) {
+            selectedSubcategoryId = subcategoryId
+            selectedSubcategoryName = subcategoryName
+            subcategorySelectionResolved = true
+            return
+        }
+
+        if (index === 0 && selectedSubcategoryId <= 0) {
+            selectedSubcategoryId = subcategoryId
+            selectedSubcategoryName = subcategoryName
+        }
+    }
+
+    function selectCategory(categoryId, categoryName) {
+        selectedCategoryId = categoryId
+        selectedCategoryName = categoryName
+        pendingCategoryId = -1
+        pendingCategoryName = ""
+        categorySelectionResolved = true
+        selectedSubcategoryId = -1
+        selectedSubcategoryName = ""
+        pendingSubcategoryId = -1
+        pendingSubcategoryName = ""
+        errorMessage = ""
+        refreshSubcategoriesForCurrentCategory(false)
+    }
+
+    function selectSubcategory(subcategoryId, subcategoryName) {
+        selectedSubcategoryId = subcategoryId
+        selectedSubcategoryName = subcategoryName
+        pendingSubcategoryId = -1
+        pendingSubcategoryName = ""
+        subcategorySelectionResolved = true
+        errorMessage = ""
     }
 
     function loadTransaction() {
@@ -70,8 +153,12 @@ Item {
         transactionType = result.type
         pendingCategoryId = Number(result.categoryId || -1)
         pendingCategoryName = result.category || ""
+        pendingSubcategoryId = Number(result.subcategoryId || -1)
+        pendingSubcategoryName = result.subcategory || ""
         selectedCategoryId = -1
         selectedCategoryName = ""
+        selectedSubcategoryId = -1
+        selectedSubcategoryName = ""
         amountField.text = result.amount.toFixed(2)
         dateField.text = result.date
         noteField.text = result.note
@@ -84,6 +171,16 @@ Item {
             return
         }
 
+        if (subcategoryRepeater.count === 0) {
+            errorMessage = "当前一级分类下没有二级分类，请先在分类管理中添加"
+            return
+        }
+
+        if (selectedSubcategoryId <= 0 || selectedSubcategoryName.length === 0) {
+            errorMessage = "请先选择二级分类"
+            return
+        }
+
         const result = appController.updateTransaction(
             transactionId,
             transactionType,
@@ -91,7 +188,9 @@ Item {
             selectedCategoryName,
             dateField.text,
             noteField.text,
-            selectedCategoryId
+            selectedCategoryId,
+            selectedSubcategoryId,
+            selectedSubcategoryName
         )
 
         if (result.success) {
@@ -221,12 +320,7 @@ Item {
                         Component.onCompleted: root.applyCategoryCandidate(categoryId, name, index)
 
                         onClicked: function(categoryName) {
-                            root.selectedCategoryId = categoryId
-                            root.selectedCategoryName = categoryName
-                            root.pendingCategoryId = -1
-                            root.pendingCategoryName = ""
-                            root.categorySelectionResolved = true
-                            root.errorMessage = ""
+                            root.selectCategory(categoryId, categoryName)
                         }
                     }
                 }
@@ -239,6 +333,56 @@ Item {
                 font.pixelSize: 15
                 wrapMode: Text.WordWrap
                 visible: categoryRepeater.count === 0
+            }
+
+            Text {
+                width: parent.width
+                text: "二级分类"
+                color: "#3c4043"
+                font.pixelSize: 16
+                font.bold: true
+                visible: root.selectedCategoryId > 0
+            }
+
+            Grid {
+                id: subcategoryGrid
+
+                width: parent.width
+                columns: 2
+                columnSpacing: 10
+                rowSpacing: 10
+                visible: root.selectedCategoryId > 0 && subcategoryRepeater.count > 0
+
+                Repeater {
+                    id: subcategoryRepeater
+
+                    model: appController.subcategoryListModel
+
+                    delegate: CategoryOption {
+                        required property int index
+                        required property string name
+
+                        width: (subcategoryGrid.width - subcategoryGrid.columnSpacing) / 2
+                        height: 44
+                        label: name
+                        selected: root.selectedSubcategoryId === model.id
+
+                        Component.onCompleted: root.applySubcategoryCandidate(model.id, name, index)
+
+                        onClicked: function(subcategoryName) {
+                            root.selectSubcategory(model.id, subcategoryName)
+                        }
+                    }
+                }
+            }
+
+            Text {
+                width: parent.width
+                text: "当前一级分类下没有二级分类，请先在分类管理中添加"
+                color: "#5f6368"
+                font.pixelSize: 15
+                wrapMode: Text.WordWrap
+                visible: root.selectedCategoryId > 0 && subcategoryRepeater.count === 0
             }
 
             FormField {

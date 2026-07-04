@@ -75,6 +75,8 @@ QVariantMap transactionToMap(const Transaction &transaction)
         {QStringLiteral("categoryId"), transaction.categoryId().has_value()
              ? transaction.categoryId().value()
              : -1},
+        {QStringLiteral("subcategoryId"), transaction.subcategoryId()},
+        {QStringLiteral("subcategory"), transaction.subcategory()},
         {QStringLiteral("date"), transaction.date()},
         {QStringLiteral("note"), transaction.note()}
     };
