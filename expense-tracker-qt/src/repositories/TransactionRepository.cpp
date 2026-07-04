@@ -533,6 +533,8 @@ bool TransactionRepository::updateTransaction(const Transaction &transaction)
             amount = :amount,
             category = :category,
             category_id = :category_id,
+            subcategory_id = :subcategory_id,
+            subcategory = :subcategory,
             date = :date,
             note = :note,
             updated_at = :updated_at
@@ -552,6 +554,14 @@ bool TransactionRepository::updateTransaction(const Transaction &transaction)
                     transaction.categoryId().has_value()
                         ? QVariant(transaction.categoryId().value())
                         : QVariant());
+    query.bindValue(QStringLiteral(":subcategory_id"),
+                    transaction.subcategoryId() > 0
+                        ? QVariant(transaction.subcategoryId())
+                        : QVariant());
+    query.bindValue(QStringLiteral(":subcategory"),
+                    transaction.subcategory().trimmed().isEmpty()
+                        ? QVariant()
+                        : QVariant(transaction.subcategory().trimmed()));
     query.bindValue(QStringLiteral(":date"), transaction.date());
     query.bindValue(QStringLiteral(":note"), transaction.note());
     query.bindValue(QStringLiteral(":updated_at"), QDateTime::currentDateTime().toString(Qt::ISODate));
