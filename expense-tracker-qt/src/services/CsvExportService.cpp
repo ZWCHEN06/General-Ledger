@@ -41,7 +41,8 @@ QString CsvExportService::exportTransactions(const QList<Transaction> &transacti
         QStringLiteral("编号"),
         QStringLiteral("类型"),
         QStringLiteral("金额"),
-        QStringLiteral("分类"),
+        QStringLiteral("一级分类"),
+        QStringLiteral("二级分类"),
         QStringLiteral("日期"),
         QStringLiteral("备注"),
         QStringLiteral("创建时间"),
@@ -54,6 +55,7 @@ QString CsvExportService::exportTransactions(const QList<Transaction> &transacti
             Transaction::typeToString(transaction.type()),
             QString::number(transaction.amount(), 'f', 2),
             transaction.category(),
+            transaction.subcategory(),
             transaction.date(),
             transaction.note(),
             transaction.createdAt(),
@@ -63,4 +65,3 @@ QString CsvExportService::exportTransactions(const QList<Transaction> &transacti
 
     return lines.join(QLatin1Char('\n'));
 }
-
