@@ -14,6 +14,7 @@ Item {
     property string selectedFilterCategoryName: ""
     property int selectedFilterSubcategoryId: -1
     property string selectedFilterSubcategoryName: ""
+    property int pendingFilterSubcategoryId: -1
     property string filterErrorMessage: ""
     readonly property int pageMargin: Math.max(16, Math.min(24, Math.round(width * 0.05)))
     readonly property int bottomInset: Qt.platform.os === "android" ? 72 : pageMargin
@@ -89,6 +90,7 @@ Item {
         selectedFilterCategoryName = ""
         selectedFilterSubcategoryId = -1
         selectedFilterSubcategoryName = ""
+        pendingFilterSubcategoryId = -1
         categoryListModel.refresh("all")
         appController.subcategoryListModel.clear()
         keywordFilterInput.text = ""
@@ -120,8 +122,9 @@ Item {
         categoryFilterInput.text = state.category
         selectedFilterCategoryId = -1
         selectedFilterCategoryName = state.category
-        selectedFilterSubcategoryId = state.subcategoryId.length > 0 ? parseInt(state.subcategoryId, 10) : -1
+        selectedFilterSubcategoryId = -1
         selectedFilterSubcategoryName = ""
+        pendingFilterSubcategoryId = state.subcategoryId.length > 0 ? parseInt(state.subcategoryId, 10) : -1
         keywordFilterInput.text = state.keyword
         minAmountFilterInput.text = state.minAmount
         maxAmountFilterInput.text = state.maxAmount
@@ -150,6 +153,7 @@ Item {
         selectedFilterCategoryName = ""
         selectedFilterSubcategoryId = -1
         selectedFilterSubcategoryName = ""
+        pendingFilterSubcategoryId = -1
         filterErrorMessage = ""
         appController.subcategoryListModel.clear()
         categoryListModel.refresh(type)
@@ -172,6 +176,7 @@ Item {
     function selectFilterSubcategory(subcategoryId, subcategoryName) {
         selectedFilterSubcategoryId = subcategoryId
         selectedFilterSubcategoryName = subcategoryName
+        pendingFilterSubcategoryId = -1
         filterErrorMessage = ""
     }
 
@@ -583,6 +588,11 @@ Item {
                                         border.color: root.selectedFilterSubcategoryId === model.id ? "#1a73e8" : "#dadce0"
 
                                         Component.onCompleted: {
+                                            if (root.pendingFilterSubcategoryId > 0 && root.pendingFilterSubcategoryId === model.id) {
+                                                root.selectFilterSubcategory(model.id, name)
+                                                return
+                                            }
+
                                             if (root.selectedFilterSubcategoryId === model.id) {
                                                 root.selectedFilterSubcategoryName = name
                                             }

@@ -297,6 +297,33 @@ CategoryRepositoryResult CategoryRepository::deleteCategory(int id)
         };
     }
 
+    QSqlQuery subcategoryUsageQuery(m_database);
+    if (!subcategoryUsageQuery.prepare(QStringLiteral(R"(
+        SELECT COUNT(*)
+        FROM subcategories
+        WHERE category_id = :id
+    )"))) {
+        const QString error = QStringLiteral("检查分类二级分类使用状态失败：%1").arg(subcategoryUsageQuery.lastError().text());
+        qWarning().noquote() << error;
+        return CategoryRepositoryResult {false, 0, error};
+    }
+
+    subcategoryUsageQuery.bindValue(QStringLiteral(":id"), id);
+
+    if (!subcategoryUsageQuery.exec() || !subcategoryUsageQuery.next()) {
+        const QString error = QStringLiteral("检查分类二级分类使用状态失败：%1").arg(subcategoryUsageQuery.lastError().text());
+        qWarning().noquote() << error;
+        return CategoryRepositoryResult {false, 0, error};
+    }
+
+    if (subcategoryUsageQuery.value(0).toInt() > 0) {
+        return CategoryRepositoryResult {
+            false,
+            0,
+            QStringLiteral("该分类已有二级分类，不能删除")
+        };
+    }
+
     QSqlQuery budgetUsageQuery(m_database);
     if (!budgetUsageQuery.prepare(QStringLiteral(R"(
         SELECT COUNT(*)
