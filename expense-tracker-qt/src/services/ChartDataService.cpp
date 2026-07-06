@@ -5,26 +5,15 @@
 #include <QHash>
 #include <QSqlError>
 #include <QSqlQuery>
-#include <QVariantMap>
-
-namespace {
-struct MonthlyTrendBucket
-{
-    int year = 0;
-    int month = 0;
-    double income = 0.0;
-    double expense = 0.0;
-};
-}
 
 ChartDataService::ChartDataService(const QSqlDatabase &database)
     : m_database(database)
 {
 }
 
-QVariantList ChartDataService::monthlyTrend(int months) const
+QList<MonthlyTrendItem> ChartDataService::monthlyTrend(int months) const
 {
-    QVariantList result;
+    QList<MonthlyTrendItem> result;
 
     if (months <= 0) {
         qWarning().noquote() << "Failed to load monthly trend chart data: months must be greater than 0.";
@@ -43,7 +32,7 @@ QVariantList ChartDataService::monthlyTrend(int months) const
     QList<QString> monthKeys;
     monthKeys.reserve(months);
 
-    QHash<QString, MonthlyTrendBucket> buckets;
+    QHash<QString, MonthlyTrendItem> buckets;
     buckets.reserve(months);
 
     for (int index = 0; index < months; ++index) {
@@ -51,9 +40,8 @@ QVariantList ChartDataService::monthlyTrend(int months) const
         const QString monthKey = monthDate.toString(QStringLiteral("yyyy-MM"));
         monthKeys.append(monthKey);
         buckets.insert(monthKey,
-                       MonthlyTrendBucket{
-                           monthDate.year(),
-                           monthDate.month(),
+                       MonthlyTrendItem{
+                           monthKey,
                            0.0,
                            0.0
                        });
@@ -94,7 +82,7 @@ QVariantList ChartDataService::monthlyTrend(int months) const
             continue;
         }
 
-        MonthlyTrendBucket bucket = buckets.value(monthKey);
+        MonthlyTrendItem bucket = buckets.value(monthKey);
         const QString type = query.value(QStringLiteral("type")).toString();
         const double amount = query.value(QStringLiteral("total_amount")).toDouble();
 
@@ -109,15 +97,7 @@ QVariantList ChartDataService::monthlyTrend(int months) const
 
     result.reserve(monthKeys.size());
     for (const QString &monthKey : monthKeys) {
-        const MonthlyTrendBucket bucket = buckets.value(monthKey);
-
-        QVariantMap item;
-        item.insert(QStringLiteral("year"), bucket.year);
-        item.insert(QStringLiteral("month"), bucket.month);
-        item.insert(QStringLiteral("label"), QStringLiteral("%1月").arg(bucket.month));
-        item.insert(QStringLiteral("income"), bucket.income);
-        item.insert(QStringLiteral("expense"), bucket.expense);
-        result.append(item);
+        result.append(buckets.value(monthKey));
     }
 
     return result;
