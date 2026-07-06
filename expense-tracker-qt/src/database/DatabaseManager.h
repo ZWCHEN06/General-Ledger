@@ -19,7 +19,7 @@ public:
 private:
     static constexpr const char *ConnectionName = "expense_tracker_connection";
     static constexpr const char *DatabaseFileName = "expense_tracker.db";
-    static constexpr int CurrentSchemaVersion = 8;
+    static constexpr int CurrentSchemaVersion = 9;
 
     bool enableForeignKeys();
     bool ensureTransactionsTable();
@@ -34,9 +34,11 @@ private:
     bool migrateToVersion6();
     bool migrateToVersion7();
     bool migrateToVersion8();
+    bool migrateToVersion9();
     bool createCategoriesTable();
     bool createWeeklyBudgetsTable();
     bool createSubcategoriesTable();
+    bool createSubcategoryIndexes();
     bool addTransactionCategoryIdColumn();
     bool addTransactionSubcategoryColumns();
     bool seedDefaultCategories();

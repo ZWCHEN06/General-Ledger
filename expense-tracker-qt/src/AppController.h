@@ -97,6 +97,7 @@ public:
                                                    const QVariant &month,
                                                    const QString &type,
                                                    const QString &category,
+                                                   const QVariant &categoryId,
                                                    const QVariant &subcategoryId,
                                                    const QString &keyword,
                                                    const QVariant &minAmount,

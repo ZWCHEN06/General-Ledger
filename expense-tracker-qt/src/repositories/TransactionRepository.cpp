@@ -259,7 +259,17 @@ QList<Transaction> TransactionRepository::getTransactionsByFilter(const Transact
     }
 
     const QString category = filter.category.value_or(QString()).trimmed();
-    if (!category.isEmpty()) {
+    if (filter.categoryId.has_value()) {
+        whereConditions.append(QStringLiteral(R"(
+            (
+              transactions.category_id = :categoryId
+              OR (
+                transactions.category_id IS NULL
+                AND transactions.category = :category
+              )
+            )
+        )"));
+    } else if (!category.isEmpty()) {
         whereConditions.append(QStringLiteral("transactions.category = :category"));
     }
 
@@ -319,7 +329,10 @@ QList<Transaction> TransactionRepository::getTransactionsByFilter(const Transact
         query.bindValue(QStringLiteral(":type"), Transaction::typeToString(filter.type.value()));
     }
 
-    if (!category.isEmpty()) {
+    if (filter.categoryId.has_value()) {
+        query.bindValue(QStringLiteral(":categoryId"), filter.categoryId.value());
+        query.bindValue(QStringLiteral(":category"), category);
+    } else if (!category.isEmpty()) {
         query.bindValue(QStringLiteral(":category"), category);
     }
 

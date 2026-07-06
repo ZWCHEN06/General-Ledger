@@ -113,10 +113,6 @@ Item {
             return
         }
 
-        if (index === 0 && selectedSubcategoryId <= 0) {
-            selectedSubcategoryId = subcategoryId
-            selectedSubcategoryName = subcategoryName
-        }
     }
 
     function selectCategory(categoryId, categoryName) {

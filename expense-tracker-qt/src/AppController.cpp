@@ -1029,6 +1029,7 @@ QVariantMap AppController::applyTransactionFilter(const QVariant &year,
                                                   const QVariant &month,
                                                   const QString &type,
                                                   const QString &category,
+                                                  const QVariant &categoryId,
                                                   const QVariant &subcategoryId,
                                                   const QString &keyword,
                                                   const QVariant &minAmount,
@@ -1054,6 +1055,15 @@ QVariantMap AppController::applyTransactionFilter(const QVariant &year,
     }
 
     if (!parseOptionalTransactionType(type, &filter, &validationError)) {
+        return failureResult(validationError);
+    }
+
+    if (!parseOptionalInt(categoryId,
+                          QStringLiteral("一级分类ID"),
+                          1,
+                          2147483647,
+                          &filter.categoryId,
+                          &validationError)) {
         return failureResult(validationError);
     }
 
@@ -1134,6 +1144,9 @@ QVariantMap AppController::currentTransactionFilter() const
         {QStringLiteral("type"), m_transactionFilter.type.has_value()
              ? Transaction::typeToString(m_transactionFilter.type.value())
              : QStringLiteral("all")},
+        {QStringLiteral("categoryId"), m_transactionFilter.categoryId.has_value()
+             ? QString::number(m_transactionFilter.categoryId.value())
+             : QString()},
         {QStringLiteral("category"), m_transactionFilter.category.value_or(QString())},
         {QStringLiteral("subcategoryId"), m_transactionFilter.subcategoryId.has_value()
              ? QString::number(m_transactionFilter.subcategoryId.value())

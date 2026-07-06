@@ -72,6 +72,7 @@ Item {
                     monthFilter.month,
                     selectedFilterType,
                     selectedFilterCategoryName.length > 0 ? selectedFilterCategoryName : categoryFilterInput.text.trim(),
+                    selectedFilterCategoryId > 0 ? selectedFilterCategoryId : "",
                     selectedFilterSubcategoryId > 0 ? selectedFilterSubcategoryId : "",
                     keywordFilterInput.text.trim(),
                     minAmountFilterInput.text.trim(),
@@ -120,7 +121,7 @@ Item {
 
         selectedFilterType = state.type
         categoryFilterInput.text = state.category
-        selectedFilterCategoryId = -1
+        selectedFilterCategoryId = state.categoryId.length > 0 ? parseInt(state.categoryId, 10) : -1
         selectedFilterCategoryName = state.category
         selectedFilterSubcategoryId = -1
         selectedFilterSubcategoryName = ""
@@ -507,7 +508,8 @@ Item {
                                         border.color: root.selectedFilterCategoryId === categoryId ? "#1a73e8" : "#dadce0"
 
                                         Component.onCompleted: {
-                                            if (root.selectedFilterCategoryId <= 0 && root.selectedFilterCategoryName.length > 0 && root.selectedFilterCategoryName === name) {
+                                            if ((root.selectedFilterCategoryId > 0 && root.selectedFilterCategoryId === categoryId)
+                                                    || (root.selectedFilterCategoryName.length > 0 && root.selectedFilterCategoryName === name)) {
                                                 root.selectFilterCategory(categoryId, name)
                                             }
                                         }

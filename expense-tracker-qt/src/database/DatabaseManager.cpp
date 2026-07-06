@@ -267,6 +267,10 @@ bool DatabaseManager::migrateDatabase()
         return false;
     }
 
+    if (version < 9 && !migrateToVersion9()) {
+        return false;
+    }
+
     return true;
 }
 
@@ -542,6 +546,40 @@ bool DatabaseManager::migrateToVersion8()
     return true;
 }
 
+bool DatabaseManager::migrateToVersion9()
+{
+    if (!m_database.transaction()) {
+        m_lastErrorMessage = QStringLiteral("Failed to start SQLite schema migration to version 9: %1")
+                                 .arg(m_database.lastError().text());
+        qWarning().noquote() << "Failed to start SQLite schema migration transaction:"
+                             << m_database.lastError().text();
+        return false;
+    }
+
+    const auto rollbackMigration = [this]() {
+        if (!m_database.rollback()) {
+            qWarning().noquote() << "Failed to roll back SQLite schema migration:"
+                                 << m_database.lastError().text();
+        }
+    };
+
+    if (!createSubcategoryIndexes() || !setUserVersion(9)) {
+        rollbackMigration();
+        return false;
+    }
+
+    if (!m_database.commit()) {
+        m_lastErrorMessage = QStringLiteral("Failed to commit SQLite schema migration to version 9: %1")
+                                 .arg(m_database.lastError().text());
+        qWarning().noquote() << "Failed to commit SQLite schema migration:"
+                             << m_database.lastError().text();
+        rollbackMigration();
+        return false;
+    }
+
+    return true;
+}
+
 bool DatabaseManager::createCategoriesTable()
 {
     QSqlQuery query(m_database);
@@ -601,6 +639,51 @@ bool DatabaseManager::createSubcategoriesTable()
         m_lastErrorMessage = QStringLiteral("Failed to create subcategories table during schema migration to version 6: %1")
                                  .arg(query.lastError().text());
         qWarning().noquote() << "Failed to create subcategories table:" << query.lastError().text();
+        return false;
+    }
+
+    return true;
+}
+
+bool DatabaseManager::createSubcategoryIndexes()
+{
+    QSqlQuery query(m_database);
+    const bool subcategoryIndexCreated = query.exec(QStringLiteral(R"(
+        CREATE INDEX IF NOT EXISTS idx_subcategories_category_sort
+        ON subcategories(category_id, sort_order, id)
+    )"));
+
+    if (!subcategoryIndexCreated) {
+        m_lastErrorMessage = QStringLiteral("Failed to create subcategories category sort index during schema migration to version 9: %1")
+                                 .arg(query.lastError().text());
+        qWarning().noquote() << "Failed to create subcategories category sort index:"
+                             << query.lastError().text();
+        return false;
+    }
+
+    const bool transactionSubcategoryIndexCreated = query.exec(QStringLiteral(R"(
+        CREATE INDEX IF NOT EXISTS idx_transactions_subcategory
+        ON transactions(subcategory_id)
+    )"));
+
+    if (!transactionSubcategoryIndexCreated) {
+        m_lastErrorMessage = QStringLiteral("Failed to create transactions subcategory index during schema migration to version 9: %1")
+                                 .arg(query.lastError().text());
+        qWarning().noquote() << "Failed to create transactions subcategory index:"
+                             << query.lastError().text();
+        return false;
+    }
+
+    const bool transactionCategoryIndexCreated = query.exec(QStringLiteral(R"(
+        CREATE INDEX IF NOT EXISTS idx_transactions_category
+        ON transactions(category_id)
+    )"));
+
+    if (!transactionCategoryIndexCreated) {
+        m_lastErrorMessage = QStringLiteral("Failed to create transactions category index during schema migration to version 9: %1")
+                                 .arg(query.lastError().text());
+        qWarning().noquote() << "Failed to create transactions category index:"
+                             << query.lastError().text();
         return false;
     }
 

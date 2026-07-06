@@ -14,6 +14,7 @@ struct TransactionFilter
     std::optional<int> year;
     std::optional<int> month;
     std::optional<TransactionType> type;
+    std::optional<int> categoryId;
     std::optional<QString> category;
     std::optional<int> subcategoryId;
     std::optional<QString> keyword;

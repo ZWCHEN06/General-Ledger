@@ -21,6 +21,11 @@ bool TransactionFilter::validate(QString *errorMessage) const
         return false;
     }
 
+    if (categoryId.has_value() && categoryId.value() <= 0) {
+        setError(errorMessage, QStringLiteral("一级分类ID无效"));
+        return false;
+    }
+
     if (subcategoryId.has_value() && subcategoryId.value() <= 0) {
         setError(errorMessage, QStringLiteral("二级分类ID无效"));
         return false;
@@ -52,6 +57,7 @@ bool TransactionFilter::hasActiveConditions() const
     return year.has_value()
         || month.has_value()
         || type.has_value()
+        || categoryId.has_value()
         || !category.value_or(QString()).trimmed().isEmpty()
         || subcategoryId.has_value()
         || !keyword.value_or(QString()).trimmed().isEmpty()
