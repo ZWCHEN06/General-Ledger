@@ -63,6 +63,7 @@ qt_add_qml_module(expense-tracker-qt
     VERSION 1.0
     QML_FILES
         Main.qml
+        qml/components/BarChart.qml
         qml/components/CategoryItem.qml
         qml/components/CategoryOption.qml
         qml/components/FormField.qml
