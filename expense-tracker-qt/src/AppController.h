@@ -11,6 +11,7 @@
 
 class CategoryListModel;
 class CategoryRepository;
+class ChartDataService;
 class SubcategoryRepository;
 class TransactionListModel;
 class TransactionRepository;
@@ -67,6 +68,7 @@ public:
                                            const QVariant &subcategoryId,
                                            const QString &subcategoryName);
     Q_INVOKABLE QVariantMap currentMonthSummary() const;
+    Q_INVOKABLE QVariantMap monthlyTrendData(int months = 6) const;
     Q_INVOKABLE QVariantMap getTransactionById(int id) const;
     Q_INVOKABLE QVariantMap updateTransaction(int id,
                                               const QString &type,
@@ -122,6 +124,7 @@ public:
     void setTransactionListModel(TransactionListModel *transactionListModel);
     void setCategoryRepository(CategoryRepository *categoryRepository);
     void setCategoryListModel(CategoryListModel *categoryListModel);
+    void setChartDataService(ChartDataService *chartDataService);
     void setSubcategoryRepository(SubcategoryRepository *subcategoryRepository);
     void setSubcategoryListModel(SubcategoryListModel *subcategoryListModel);
     void setWeeklyBudgetListModel(WeeklyBudgetListModel *weeklyBudgetListModel);
@@ -139,6 +142,7 @@ private:
     TransactionListModel *m_transactionListModel = nullptr;
     CategoryRepository *m_categoryRepository = nullptr;
     CategoryListModel *m_categoryListModel = nullptr;
+    ChartDataService *m_chartDataService = nullptr;
     SubcategoryRepository *m_subcategoryRepository = nullptr;
     SubcategoryListModel *m_subcategoryListModel = nullptr;
     WeeklyBudgetListModel *m_weeklyBudgetListModel = nullptr;

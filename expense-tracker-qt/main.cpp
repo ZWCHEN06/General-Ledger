@@ -8,6 +8,7 @@
 #include "src/repositories/SubcategoryRepository.h"
 #include "src/repositories/TransactionRepository.h"
 #include "src/repositories/WeeklyBudgetRepository.h"
+#include "src/services/ChartDataService.h"
 
 #include <QDebug>
 #include <QGuiApplication>
@@ -49,6 +50,7 @@ int main(int argc, char *argv[])
     CategoryRepository categoryRepository(databaseManager.database());
     SubcategoryRepository subcategoryRepository(databaseManager.database());
     WeeklyBudgetRepository weeklyBudgetRepository(databaseManager.database());
+    ChartDataService chartDataService(databaseManager.database());
     AppController appController(&transactionRepository);
     appController.setDatabaseStatus(databaseReady, databaseErrorMessage);
 
@@ -59,6 +61,7 @@ int main(int argc, char *argv[])
     appController.setTransactionListModel(&transactionListModel);
     appController.setCategoryRepository(&categoryRepository);
     appController.setCategoryListModel(&categoryListModel);
+    appController.setChartDataService(&chartDataService);
     appController.setSubcategoryRepository(&subcategoryRepository);
     appController.setSubcategoryListModel(&subcategoryListModel);
     appController.setWeeklyBudgetListModel(&weeklyBudgetListModel);

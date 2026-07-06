@@ -11,6 +11,7 @@
 #include "repositories/TransactionRepository.h"
 #include "repositories/WeeklyBudgetRepository.h"
 #include "services/CategorySummaryService.h"
+#include "services/ChartDataService.h"
 #include "services/CsvExportService.h"
 #include "services/SummaryService.h"
 #include "services/WeeklyBudgetService.h"
@@ -382,6 +383,11 @@ void AppController::setCategoryRepository(CategoryRepository *categoryRepository
 void AppController::setCategoryListModel(CategoryListModel *categoryListModel)
 {
     m_categoryListModel = categoryListModel;
+}
+
+void AppController::setChartDataService(ChartDataService *chartDataService)
+{
+    m_chartDataService = chartDataService;
 }
 
 void AppController::setSubcategoryRepository(SubcategoryRepository *subcategoryRepository)
@@ -916,6 +922,58 @@ QVariantMap AppController::currentMonthSummary() const
         {QStringLiteral("income"), summary.totalIncome},
         {QStringLiteral("expense"), summary.totalExpense},
         {QStringLiteral("balance"), summary.balance}
+    };
+}
+
+QVariantMap AppController::monthlyTrendData(int months) const
+{
+    if (!m_databaseReady) {
+        return QVariantMap {
+            {QStringLiteral("success"), false},
+            {QStringLiteral("errorMessage"), effectiveDatabaseErrorMessage()}
+        };
+    }
+
+    if (!m_chartDataService) {
+        return QVariantMap {
+            {QStringLiteral("success"), false},
+            {QStringLiteral("errorMessage"), QStringLiteral("图表数据服务未初始化")}
+        };
+    }
+
+    if (months <= 0) {
+        return QVariantMap {
+            {QStringLiteral("success"), false},
+            {QStringLiteral("errorMessage"), QStringLiteral("月份数量必须大于 0")}
+        };
+    }
+
+    const QList<MonthlyTrendItem> trendItems = m_chartDataService->monthlyTrend(months);
+    if (trendItems.isEmpty()) {
+        return QVariantMap {
+            {QStringLiteral("success"), false},
+            {QStringLiteral("errorMessage"), QStringLiteral("加载月度趋势图表数据失败")}
+        };
+    }
+
+    QVariantList monthLabels;
+    QVariantList incomeAmounts;
+    QVariantList expenseAmounts;
+    monthLabels.reserve(trendItems.size());
+    incomeAmounts.reserve(trendItems.size());
+    expenseAmounts.reserve(trendItems.size());
+
+    for (const MonthlyTrendItem &item : trendItems) {
+        monthLabels.append(item.month);
+        incomeAmounts.append(item.income);
+        expenseAmounts.append(item.expense);
+    }
+
+    return QVariantMap {
+        {QStringLiteral("success"), true},
+        {QStringLiteral("months"), monthLabels},
+        {QStringLiteral("income"), incomeAmounts},
+        {QStringLiteral("expense"), expenseAmounts}
     };
 }
 
