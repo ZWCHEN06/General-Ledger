@@ -95,6 +95,7 @@ public:
     Q_INVOKABLE QVariantMap deleteTransaction(int id);
     Q_INVOKABLE QVariantMap exportCsv() const;
     Q_INVOKABLE QVariantMap currentMonthCategorySummary() const;
+    Q_INVOKABLE QVariantMap categoryPieData() const;
     Q_INVOKABLE QVariantMap applyTransactionFilter(const QVariant &year,
                                                    const QVariant &month,
                                                    const QString &type,

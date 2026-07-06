@@ -1083,6 +1083,11 @@ QVariantMap AppController::currentMonthCategorySummary() const
     };
 }
 
+QVariantMap AppController::categoryPieData() const
+{
+    return currentMonthCategorySummary();
+}
+
 QVariantMap AppController::applyTransactionFilter(const QVariant &year,
                                                   const QVariant &month,
                                                   const QString &type,
