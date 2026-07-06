@@ -67,6 +67,7 @@ qt_add_qml_module(expense-tracker-qt
         qml/components/CategoryItem.qml
         qml/components/CategoryOption.qml
         qml/components/FormField.qml
+        qml/components/PieChart.qml
         qml/components/TypeOption.qml
         qml/pages/AddTransactionPage.qml
         qml/pages/CategoryManagePage.qml
