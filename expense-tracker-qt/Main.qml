@@ -31,6 +31,7 @@ Window {
             onTransactionListRequested: pageLoader.sourceComponent = transactionListPageComponent
             onCategorySummaryRequested: pageLoader.sourceComponent = categorySummaryPageComponent
             onWeeklyBudgetRequested: pageLoader.sourceComponent = weeklyBudgetPageComponent
+            onChartPageRequested: pageLoader.sourceComponent = chartPageComponent
             onSettingsRequested: pageLoader.sourceComponent = settingsPageComponent
         }
     }

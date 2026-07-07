@@ -7,6 +7,7 @@ Item {
     signal transactionListRequested()
     signal categorySummaryRequested()
     signal weeklyBudgetRequested()
+    signal chartPageRequested()
     signal settingsRequested()
 
     property real monthlyIncome: 0.00
@@ -141,6 +142,13 @@ Item {
             height: 46
             text: "本周预算"
             onClicked: root.weeklyBudgetRequested()
+        }
+
+        NavigationButton {
+            width: parent.width
+            height: 46
+            text: "图表统计"
+            onClicked: root.chartPageRequested()
         }
         }
     }
