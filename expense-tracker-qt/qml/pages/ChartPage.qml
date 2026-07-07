@@ -16,10 +16,18 @@ Item {
     readonly property int pageMargin: Math.max(16, Math.min(24, Math.round(width * 0.05)))
     readonly property int bottomInset: Qt.platform.os === "android" ? 72 : pageMargin
 
+    function errorMessageFromResult(result, fallbackMessage) {
+        if (result && result.errorMessage && result.errorMessage.length > 0) {
+            return result.errorMessage
+        }
+
+        return fallbackMessage
+    }
+
     function loadTrendData() {
         const result = appController.monthlyTrendData(6)
         if (!result || !result.success) {
-            root.trendErrorMessage = result && result.errorMessage ? result.errorMessage : "加载收支趋势失败"
+            root.trendErrorMessage = root.errorMessageFromResult(result, "加载近 6 个月收支趋势失败")
             root.monthLabels = []
             root.incomeValues = []
             root.expenseValues = []
@@ -35,7 +43,7 @@ Item {
     function loadPieData() {
         const result = appController.categoryPieData()
         if (!result || !result.success) {
-            root.pieErrorMessage = result && result.errorMessage ? result.errorMessage : "加载支出占比失败"
+            root.pieErrorMessage = root.errorMessageFromResult(result, "加载本月支出分类占比失败")
             root.pieItems = []
             return
         }
@@ -120,6 +128,7 @@ Item {
         contentWidth: width
         contentHeight: contentColumn.height + root.bottomInset
         clip: true
+        boundsBehavior: Flickable.StopAtBounds
 
         Column {
             id: contentColumn
