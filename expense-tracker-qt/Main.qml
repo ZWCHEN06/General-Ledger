@@ -119,4 +119,12 @@ Window {
             }
         }
     }
+
+    Component {
+        id: chartPageComponent
+
+        ChartPage {
+            onBackRequested: pageLoader.sourceComponent = homePageComponent
+        }
+    }
 }
