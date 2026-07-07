@@ -10,7 +10,7 @@ Item {
     property color backgroundColor: "#FFFFFF"
     property var colorPalette: ["#4285F4","#EA4335","#FBBC04","#34A853","#FF6D01","#9334E6","#00BCD4","#E91E63","#3F51B5","#795548"]
 
-    implicitHeight: 280
+    implicitHeight: preferredHeight()
 
     function itemAmount(index) {
         if (!pieItems || index < 0 || index >= pieItems.length) {
@@ -38,6 +38,36 @@ Item {
         }
 
         return total
+    }
+
+    function visibleItemCount() {
+        let count = 0
+        const itemCount = pieItems ? pieItems.length : 0
+
+        for (let index = 0; index < itemCount; ++index) {
+            if (itemAmount(index) > 0) {
+                ++count
+            }
+        }
+
+        return count
+    }
+
+    function legendColumnCount() {
+        const availableWidth = Math.max(1, width - 32)
+        return Math.max(1, Math.floor(availableWidth / 150))
+    }
+
+    function legendRowCount() {
+        return Math.max(1, Math.ceil(visibleItemCount() / legendColumnCount()))
+    }
+
+    function preferredHeight() {
+        if (!pieItems || pieItems.length === 0 || totalAmount() <= 0) {
+            return 280
+        }
+
+        return Math.max(280, 208 + legendRowCount() * 24)
     }
 
     function formatAmount(value) {
@@ -85,7 +115,7 @@ Item {
             const sidePadding = 16
             const legendTopGap = 18
             const legendLineHeight = 24
-            const legendRows = Math.ceil(pieItems.length / Math.max(1, Math.floor(Math.max(1, width - sidePadding * 2) / 150)))
+            const legendRows = root.legendRowCount()
             const legendHeight = Math.max(legendLineHeight, legendRows * legendLineHeight)
             const chartAreaHeight = Math.max(120, height - topPadding - legendTopGap - legendHeight - 8)
             const centerX = width / 2
@@ -127,21 +157,22 @@ Item {
             ctx.fillText(root.formatAmount(total), centerX, centerY + 12)
 
             const legendAreaTop = topPadding + chartAreaHeight + legendTopGap
-            const columns = Math.max(1, Math.floor(Math.max(1, width - sidePadding * 2) / 150))
+            const columns = root.legendColumnCount()
             const columnWidth = Math.max(120, (width - sidePadding * 2) / columns)
 
             ctx.textAlign = "left"
             ctx.textBaseline = "middle"
             ctx.font = "11px sans-serif"
 
+            let visibleIndex = 0
             for (let index = 0; index < pieItems.length; ++index) {
                 const amount = root.itemAmount(index)
                 if (amount <= 0) {
                     continue
                 }
 
-                const row = Math.floor(index / columns)
-                const column = index % columns
+                const row = Math.floor(visibleIndex / columns)
+                const column = visibleIndex % columns
                 const x = sidePadding + column * columnWidth
                 const y = legendAreaTop + row * legendLineHeight
                 const category = root.itemCategory(index)
@@ -152,6 +183,7 @@ Item {
 
                 ctx.fillStyle = root.textColor
                 ctx.fillText(label, x + 16, y, Math.max(40, columnWidth - 20))
+                ++visibleIndex
             }
         }
     }
