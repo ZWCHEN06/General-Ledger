@@ -457,6 +457,7 @@ Item {
         }
 
         delegate: Rectangle {
+            required property int subcategoryId
             required property string name
             required property bool isDefault
 
@@ -521,7 +522,7 @@ Item {
 
                             anchors.fill: parent
                             cursorShape: Qt.PointingHandCursor
-                            onClicked: root.startEdit(model.id, name, isDefault)
+                            onClicked: root.startEdit(subcategoryId, name, isDefault)
                         }
                     }
 
@@ -545,7 +546,7 @@ Item {
 
                             anchors.fill: parent
                             cursorShape: Qt.PointingHandCursor
-                            onClicked: root.requestDelete(model.id, name, isDefault)
+                            onClicked: root.requestDelete(subcategoryId, name, isDefault)
                         }
                     }
                 }

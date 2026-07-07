@@ -581,21 +581,22 @@ Item {
                                     model: appController.subcategoryListModel
 
                                     delegate: Rectangle {
+                                        required property int subcategoryId
                                         required property string name
 
                                         width: (filterSubcategoryGrid.width - filterSubcategoryGrid.columnSpacing) / 2
                                         height: 38
                                         radius: 6
-                                        color: root.selectedFilterSubcategoryId === model.id ? "#e8f0fe" : "#ffffff"
-                                        border.color: root.selectedFilterSubcategoryId === model.id ? "#1a73e8" : "#dadce0"
+                                        color: root.selectedFilterSubcategoryId === subcategoryId ? "#e8f0fe" : "#ffffff"
+                                        border.color: root.selectedFilterSubcategoryId === subcategoryId ? "#1a73e8" : "#dadce0"
 
                                         Component.onCompleted: {
-                                            if (root.pendingFilterSubcategoryId > 0 && root.pendingFilterSubcategoryId === model.id) {
-                                                root.selectFilterSubcategory(model.id, name)
+                                            if (root.pendingFilterSubcategoryId > 0 && root.pendingFilterSubcategoryId === subcategoryId) {
+                                                root.selectFilterSubcategory(subcategoryId, name)
                                                 return
                                             }
 
-                                            if (root.selectedFilterSubcategoryId === model.id) {
+                                            if (root.selectedFilterSubcategoryId === subcategoryId) {
                                                 root.selectedFilterSubcategoryName = name
                                             }
                                         }
@@ -604,7 +605,7 @@ Item {
                                             anchors.centerIn: parent
                                             width: parent.width - 16
                                             text: name
-                                            color: root.selectedFilterSubcategoryId === model.id ? "#1a73e8" : "#3c4043"
+                                            color: root.selectedFilterSubcategoryId === subcategoryId ? "#1a73e8" : "#3c4043"
                                             font.pixelSize: 14
                                             font.bold: true
                                             horizontalAlignment: Text.AlignHCenter
@@ -614,7 +615,7 @@ Item {
                                         MouseArea {
                                             anchors.fill: parent
                                             cursorShape: Qt.PointingHandCursor
-                                            onClicked: root.selectFilterSubcategory(model.id, name)
+                                            onClicked: root.selectFilterSubcategory(subcategoryId, name)
                                         }
                                     }
                                 }

@@ -32,6 +32,7 @@ QVariant SubcategoryListModel::data(const QModelIndex &index, int role) const
 
     switch (role) {
     case IdRole:
+    case SubcategoryIdRole:
         return subcategory.id();
     case CategoryIdRole:
         return subcategory.categoryId();
@@ -50,6 +51,7 @@ QHash<int, QByteArray> SubcategoryListModel::roleNames() const
 {
     return {
         {IdRole, "id"},
+        {SubcategoryIdRole, "subcategoryId"},
         {CategoryIdRole, "categoryId"},
         {NameRole, "name"},
         {IsDefaultRole, "isDefault"},

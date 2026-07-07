@@ -356,17 +356,18 @@ Item {
 
                     delegate: CategoryOption {
                         required property int index
+                        required property int subcategoryId
                         required property string name
 
                         width: (subcategoryGrid.width - subcategoryGrid.columnSpacing) / 2
                         height: 44
                         label: name
-                        selected: root.selectedSubcategoryId === model.id
+                        selected: root.selectedSubcategoryId === subcategoryId
 
-                        Component.onCompleted: root.applySubcategoryCandidate(model.id, name, index)
+                        Component.onCompleted: root.applySubcategoryCandidate(subcategoryId, name, index)
 
                         onClicked: function(subcategoryName) {
-                            root.selectSubcategory(model.id, subcategoryName)
+                            root.selectSubcategory(subcategoryId, subcategoryName)
                         }
                     }
                 }
