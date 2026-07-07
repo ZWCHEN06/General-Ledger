@@ -10,7 +10,6 @@
 #include "repositories/SubcategoryRepository.h"
 #include "repositories/TransactionRepository.h"
 #include "repositories/WeeklyBudgetRepository.h"
-#include "services/CategorySummaryService.h"
 #include "services/ChartDataService.h"
 #include "services/CsvExportService.h"
 #include "services/SummaryService.h"
@@ -1061,16 +1060,14 @@ QVariantMap AppController::currentMonthCategorySummary() const
     }
 
     const QDate currentDate = QDate::currentDate();
-    const QList<Transaction> transactions =
-        m_transactionRepository->getTransactionsByMonth(currentDate.year(), currentDate.month());
-
-    const CategorySummaryService categorySummaryService;
-    const QList<CategorySummaryItem> summaryItems = categorySummaryService.calculate(transactions);
+    const QList<ExpenseCategorySummaryItem> summaryItems =
+        m_transactionRepository->getMonthlyExpenseByCategory(currentDate.year(), currentDate.month());
 
     QVariantList items;
     items.reserve(summaryItems.size());
-    for (const CategorySummaryItem &summaryItem : summaryItems) {
+    for (const ExpenseCategorySummaryItem &summaryItem : summaryItems) {
         items.append(QVariantMap {
+            {QStringLiteral("categoryId"), summaryItem.categoryId},
             {QStringLiteral("category"), summaryItem.category},
             {QStringLiteral("amount"), summaryItem.amount}
         });

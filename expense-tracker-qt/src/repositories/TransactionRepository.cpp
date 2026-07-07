@@ -403,6 +403,8 @@ QList<Transaction> TransactionRepository::getTransactionsByMonth(int year, int m
         LEFT JOIN categories
           ON categories.id = transactions.category_id
          AND categories.type = transactions.type
+        WHERE transactions.date >= :startDate
+          AND transactions.date < :endDate
         ORDER BY transactions.date DESC, transactions.id DESC
     )"));
 
@@ -410,6 +412,9 @@ QList<Transaction> TransactionRepository::getTransactionsByMonth(int year, int m
         qWarning().noquote() << "按月份查询交易失败：SQL 准备失败:" << query.lastError().text();
         return transactions;
     }
+
+    query.bindValue(QStringLiteral(":startDate"), startDate.toString(Qt::ISODate));
+    query.bindValue(QStringLiteral(":endDate"), endDate.toString(Qt::ISODate));
 
     if (!query.exec()) {
         qWarning().noquote() << "按月份查询交易失败：SQL 执行失败:" << query.lastError().text();
@@ -436,6 +441,79 @@ QList<Transaction> TransactionRepository::getTransactionsByMonth(int year, int m
     });
 
     return transactions;
+}
+
+QList<ExpenseCategorySummaryItem> TransactionRepository::getMonthlyExpenseByCategory(int year, int month)
+{
+    QList<ExpenseCategorySummaryItem> summaryItems;
+
+    if (!m_database.isOpen()) {
+        qWarning().noquote() << "按月份统计分类支出失败：数据库未打开";
+        return summaryItems;
+    }
+
+    const QDate startDate(year, month, 1);
+    if (!startDate.isValid()) {
+        qWarning().noquote() << "按月份统计分类支出失败：年份或月份非法，year:" << year << "month:" << month;
+        return summaryItems;
+    }
+
+    const QDate endDate = startDate.addMonths(1);
+
+    QSqlQuery query(m_database);
+    if (!query.prepare(QStringLiteral(R"(
+        SELECT
+            resolved_category_id AS category_id,
+            category,
+            SUM(amount) AS total_amount
+        FROM (
+            SELECT
+                COALESCE(transactions.category_id, categories.id) AS resolved_category_id,
+                COALESCE(categories.name, transactions.category) AS category,
+                transactions.amount AS amount
+            FROM transactions
+            LEFT JOIN categories
+              ON (
+                    categories.id = transactions.category_id
+                    AND categories.type = transactions.type
+                 )
+              OR (
+                    transactions.category_id IS NULL
+                    AND categories.name = transactions.category
+                    AND categories.type = transactions.type
+                 )
+            WHERE transactions.type = 'expense'
+              AND transactions.date >= :startDate
+              AND transactions.date < :endDate
+        ) AS monthly_expenses
+        WHERE category IS NOT NULL
+          AND TRIM(category) != ''
+        GROUP BY resolved_category_id, category
+        ORDER BY total_amount DESC, category ASC
+    )"))) {
+        qWarning().noquote() << "按月份统计分类支出失败：SQL 准备失败:" << query.lastError().text();
+        return summaryItems;
+    }
+
+    query.bindValue(QStringLiteral(":startDate"), startDate.toString(Qt::ISODate));
+    query.bindValue(QStringLiteral(":endDate"), endDate.toString(Qt::ISODate));
+
+    if (!query.exec()) {
+        qWarning().noquote() << "按月份统计分类支出失败：SQL 执行失败:" << query.lastError().text();
+        return summaryItems;
+    }
+
+    while (query.next()) {
+        const QVariant categoryIdValue = query.value(QStringLiteral("category_id"));
+        summaryItems.append(ExpenseCategorySummaryItem {
+            categoryIdValue.isNull() ? -1 : categoryIdValue.toInt(),
+            query.value(QStringLiteral("category")).toString(),
+            query.value(QStringLiteral("total_amount")).toDouble()
+        });
+    }
+
+    // 优先按 category_id 聚合；旧账单 category_id 为空时按一级分类文本匹配 categories 后纳入统计。
+    return summaryItems;
 }
 
 QHash<int, double> TransactionRepository::getWeeklyExpenseByCategory(const QString &weekStartDate,

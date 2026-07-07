@@ -52,6 +52,23 @@ Item {
         return monthLabels && monthLabels.length > 0 && maxAmount() > 0
     }
 
+    function monthLabelAt(index) {
+        if (!monthLabels || index < 0 || index >= monthLabels.length) {
+            return ""
+        }
+
+        const label = String(monthLabels[index])
+        if (width < 360 && label.length >= 7) {
+            return label.slice(5)
+        }
+
+        return label
+    }
+
+    function shouldDrawValueLabels() {
+        return width >= 340 || (monthLabels && monthLabels.length <= 4)
+    }
+
     onMonthLabelsChanged: chartCanvas.requestPaint()
     onIncomeValuesChanged: chartCanvas.requestPaint()
     onExpenseValuesChanged: chartCanvas.requestPaint()
@@ -112,12 +129,14 @@ Item {
             }
 
             const monthCount = monthLabels.length
-            const availableGroupWidth = Math.max(12, (chartWidth - root.barGroupGap * Math.max(0, monthCount - 1)) / monthCount)
+            const effectiveGroupGap = width < 360 ? Math.min(root.barGroupGap, 10) : root.barGroupGap
+            const availableGroupWidth = Math.max(12, (chartWidth - effectiveGroupGap * Math.max(0, monthCount - 1)) / monthCount)
             const barWidth = Math.max(4, (availableGroupWidth - root.barGap) / 2)
+            const drawValueLabels = root.shouldDrawValueLabels()
 
             ctx.textAlign = "center"
             for (let index = 0; index < monthCount; ++index) {
-                const groupX = chartLeft + index * (availableGroupWidth + root.barGroupGap)
+                const groupX = chartLeft + index * (availableGroupWidth + effectiveGroupGap)
                 const income = root.valueAt(incomeValues, index)
                 const expense = root.valueAt(expenseValues, index)
                 const incomeHeight = chartHeight * income / normalizedMax
@@ -135,15 +154,15 @@ Item {
 
                 ctx.font = "10px sans-serif"
                 ctx.fillStyle = root.textColor
-                if (income > 0) {
+                if (drawValueLabels && income > 0) {
                     ctx.fillText(root.formatAmount(income), incomeX + barWidth / 2, Math.max(10, incomeY - 8))
                 }
-                if (expense > 0) {
+                if (drawValueLabels && expense > 0) {
                     ctx.fillText(root.formatAmount(expense), expenseX + barWidth / 2, Math.max(10, expenseY - 8))
                 }
 
                 ctx.font = "11px sans-serif"
-                ctx.fillText(monthLabels[index], groupX + availableGroupWidth / 2, chartBaseY + 18)
+                ctx.fillText(root.monthLabelAt(index), groupX + availableGroupWidth / 2, chartBaseY + 18)
             }
 
             const legendY = height - 18
